@@ -287,6 +287,24 @@
   <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
 </p>
 
+            
+.contact-link {
+  color: #000;                 /* black */
+  text-decoration: none;       /* no underline by default */
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.contact-link:hover,
+.contact-link:focus {
+  color: #000;                 /* stay black (or change if you want) */
+  text-decoration: underline;  /* underline on hover/focus */
+}
+
+.contact-link:focus {
+  outline: 2px solid rgba(0,0,0,0.25); /* accessible focus ring */
+  outline-offset: 2px;
+}
+
 
            
 
