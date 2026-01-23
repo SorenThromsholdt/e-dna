@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>eDNA i nicheområder</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
         * {
@@ -418,20 +421,29 @@
                 document.getElementById('loading').style.display = 'none';
 
                 const bounds = [];
+                const markers = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                });
 
                 results.data.forEach(row => {
                     const lat = parseNumber(row['Y-koordinat']);
                     const lng = parseNumber(row['X-koordinat']);
 
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        const marker = L.marker([lat, lng]).addTo(map);
+                        const marker = L.marker([lat, lng]);
                         marker.bindPopup(createPopupContent(row), {
                             maxWidth: 350,
                             maxHeight: 400
                         });
+                        markers.addLayer(marker);
                         bounds.push([lat, lng]);
                     }
                 });
+
+                map.addLayer(markers);
 
                 // Fit map to show all markers
                 if (bounds.length > 0) {
