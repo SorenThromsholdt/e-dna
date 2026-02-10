@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>eDNA i nicheområder</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
+    https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css
+    https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css
+    https://unpkg.com/leaflet@1.9.4/dist/leaflet.js</script>
+    https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js</script>
+    https://unpkg.com/papaparse@5.4.1/papaparse.min.js</script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
@@ -106,7 +106,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
         }
 
-        /* Filter panel */
+        /* NEW: Filter panel */
         .filter-panel {
             position: absolute;
             top: 10px;
@@ -144,7 +144,7 @@
 <body>
     <div id="map"></div>
 
-    <!-- Filter panel -->
+    <!-- NEW: Filter panel -->
     <div class="filter-panel" aria-label="Filter for arter">
         <div class="filter-title">Filtrer efter art</div>
 
@@ -155,11 +155,13 @@
 
         <div class="filter-group">
             <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
-            <!-- CHANGED: kun tre faste værdier 2/1/0 -->
             <select id="presenceSelect" class="filter-select">
-                <option value="2">Registreret i begge prøver (=2)</option>
-                <option value="1">Registreret i én prøve (=1)</option>
-                <option value="0">Ikke registreret (=0)</option>
+                <option value="any">Alle</option>
+                <option value="present">Registreret (≥1)</option>
+                <option value="both">Begge prøver (=2)</option>
+                <option value="one">Én prøve (=1)</option>
+                <option value="absent">Ikke registreret (=0)</option>
+                <option value="na">Ikke analyseret (tom)</option>
             </select>
         </div>
 
@@ -192,10 +194,7 @@
             <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
             <address>
-              <a class="contact-link"
-                 href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d"
-                 target="_blank"
-                 rel="noopener">
+              https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d
                 Peder Oxes Allé 2, 3400 Hillerød
               </a>
             </address>
@@ -230,7 +229,7 @@
 
             <p>
               E-mail:
-              <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+              mailto:stc@ek.dkstc@ek.dk</a>
             </p>
 
             <style>
@@ -290,7 +289,7 @@
         const map = L.map('map').setView([55.9, 11.5], 7);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution: '&copy; https://www.openstreetmap.org/copyrightOpenStreetMap</a>'
         }).addTo(map);
 
         function toggleInfo() {
@@ -393,7 +392,7 @@
             return html;
         }
 
-        // --- Filter logic state ---
+        // --- NEW: Filter logic state ---
         let allMarkers = [];               // alle markører med data
         let allBounds = [];                // alle bounds for nulstil/fit
         const markers = L.markerClusterGroup({
@@ -404,14 +403,23 @@
         });
 
         // Hjælpere til filtrering
-
-        // CHANGED: simplere match – kræver præcis lighed (0,1,2). Tomme celler matches ikke.
         function valueMatchesMode(cellValue, mode) {
-            // mode: '0' | '1' | '2'
-            const v = parseInt(cellValue, 10);
-            const m = parseInt(mode, 10);
-            if (Number.isNaN(v)) return false; // blank/NaN = ingen match
-            return v === m;
+            // cellValue kan være '' | '0'|'1'|'2' | evt. null/undefined
+            const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
+            if (mode === 'any') return true;
+            if (mode === 'na') return v === '';
+            if (v === '') return false; // for øvrige modes gælder tom ikke
+
+            const n = parseInt(v, 10);
+            if (Number.isNaN(n)) return false;
+
+            switch (mode) {
+                case 'present': return n >= 1;
+                case 'both':    return n === 2;
+                case 'one':     return n === 1;
+                case 'absent':  return n === 0;
+                default: return true;
+            }
         }
 
         function getSelectedSpecies() {
@@ -430,9 +438,10 @@
             const mode = getPresenceMode();
             const matchAll = getMatchAll();
 
-            // CHANGED: vis alle hvis ingen art valgt
-            const showAll = (selectedSpecies.length === 0);
+            // hvis ingen art valgt eller "Alle" valgt => vis alle
+            const showAll = (selectedSpecies.length === 0) || (mode === 'any');
 
+            // tøm klyngen og genindsæt de markører der matcher
             markers.clearLayers();
 
             const kept = [];
@@ -453,6 +462,7 @@
             }
 
             if (fit) {
+                // hvis vi fitter efter filter, brug bounds for de beholdte markører
                 const b = kept.map(m => m.getLatLng());
                 if (b.length > 0) {
                     const fitBounds = L.latLngBounds(b);
@@ -464,7 +474,7 @@
         function resetFilter() {
             // nulstil UI
             document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
-            document.getElementById('presenceSelect').value = '2';       // valgfrit: sæt default (2)
+            document.getElementById('presenceSelect').value = 'any';
             document.getElementById('matchAll').checked = false;
 
             // vis alle markører
@@ -477,7 +487,7 @@
             }
         }
 
-        // --- UI init ---
+        // --- NEW: UI init ---
         function initFilterUI() {
             // udfyld arts-listen fra SPECIES_COLUMNS
             const sel = document.getElementById('speciesSelect');
@@ -511,3 +521,38 @@
 
                 results.data.forEach(row => {
                     const lat = parseNumber(row['Y-koordinat']);
+                    const lng = parseNumber(row['X-koordinat']);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const marker = L.marker([lat, lng]);
+                        marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
+                        // NEW: gem data på markøren til filtrering
+                        marker.featureData = row;
+
+                        allMarkers.push(marker);
+                        bounds.push([lat, lng]);
+                    }
+                });
+
+                // Tilføj alle markører første gang
+                markers.addLayers(allMarkers);
+
+                // Gem total-bounds til reset
+                allBounds = bounds;
+
+                // Fit map to show all markers
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+
+                // NEW: init filter-UI når data er klar
+                initFilterUI();
+            },
+            error: function(error) {
+                document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
+                console.error('CSV parsing error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
