@@ -226,6 +226,20 @@
       outline: 2px solid rgba(0,0,0,0.25);
       outline-offset: 2px;
     }
+
+
+* Move zoom controls to bottom-right safely */
+.leaflet-control-container .leaflet-bottom.leaflet-right {
+    right: 10px !important;    /* align with Hent data button */
+    bottom: 80px !important;   /* position above the Hent data button */
+}
+
+.leaflet-control-zoom {
+    margin: 0 !important;      /* prevent Leaflet from adding spacing */
+}
+
+
+    
   </style>
 </head>
 <body>
