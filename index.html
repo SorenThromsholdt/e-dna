@@ -39,3 +39,475 @@
             margin-left: auto;
         }
         .info-toggle:hover { background: #f5f5f5; }
+
+        .info-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            padding: 20px;
+            margin-top: 10px;
+            display: none;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .info-content.open { display: block; }
+
+        .info-content h2 { font-size: 18px; margin-bottom: 12px; color: #1a5f2a; }
+        .info-content p { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 12px; }
+        .info-content h3 { font-size: 15px; margin-top: 16px; margin-bottom: 8px; color: #1a5f2a; }
+        .info-content address {
+            font-style: normal; background: #f0f7f1; padding: 8px 12px; border-radius: 4px; font-size: 13px;
+        }
+
+        /* Popup styling */
+        .leaflet-popup-content { min-width: 250px; max-width: 320px; }
+        .popup-header {
+            font-size: 16px; font-weight: 600; color: #1a5f2a;
+            margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;
+        }
+        .popup-section { margin-bottom: 12px; }
+        .popup-section-title {
+            font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .popup-row {
+            display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0;
+        }
+        .popup-label { color: #666; }
+        .popup-value { font-weight: 500; color: #333; }
+
+        .species-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .species-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .species-2 { background: #28a745; color: #ffffff; }
+        .species-1 { background: #d4edda; color: #155724; }
+        .species-0 { background: #f8d7da; color: #721c24; }
+        .species-empty { background: #e9ecef; color: #6c757d; }
+
+        .legend {
+            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
+            background: white; padding: 12px 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
+        }
+        .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 10px; }
+
+        .download-btn {
+            position: absolute; bottom: 30px; right: 10px; z-index: 1000;
+            background: white; border: none; padding: 10px 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
+            font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
+        }
+        .download-btn:hover { background: #f5f5f5; }
+
+        .loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 1000; background: white; padding: 20px 30px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
+        }
+
+        /* Filter panel */
+        .filter-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;           /* modsat info-panel */
+            z-index: 1000;
+            background: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            width: 280px;
+        }
+        .filter-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1a5f2a; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-label { font-size: 12px; color: #444; margin-bottom: 4px; display: block; }
+        .filter-select, .filter-multiselect {
+            width: 100%;
+            font-size: 13px;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fff;
+        }
+        .filter-multiselect { height: 140px; }
+        .filter-row { display: flex; align-items: center; gap: 8px; }
+        .filter-actions { display: flex; gap: 8px; }
+        .btn {
+            border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            background: #f1f3f5; color: #333;
+        }
+        .btn:hover { background: #e9ecef; }
+        .btn-primary { background: #1a5f2a; color: white; }
+        .btn-primary:hover { background: #154c21; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Filter panel -->
+    <div class="filter-panel" aria-label="Filter for arter">
+        <div class="filter-title">Filtrer efter art</div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="speciesSelect">Vælg art(er)</label>
+            <select id="speciesSelect" class="filter-multiselect" multiple></select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
+            <!-- CHANGED: kun tre faste værdier 2/1/0 -->
+            <select id="presenceSelect" class="filter-select">
+                <option value="2">Registreret i begge prøver (=2)</option>
+                <option value="1">Registreret i én prøve (=1)</option>
+                <option value="0">Ikke registreret (=0)</option>
+            </select>
+        </div>
+
+        <div class="filter-group filter-row">
+            <input type="checkbox" id="matchAll" />
+            <label for="matchAll" style="font-size: 12px; color: #333;">Match alle valgte arter</label>
+        </div>
+
+        <div class="filter-actions">
+            <button class="btn btn-primary" id="applyFilterBtn">Anvend filter</button>
+            <button class="btn" id="resetFilterBtn">Nulstil</button>
+        </div>
+    </div>
+    <!-- /Filter panel -->
+
+    <div class="info-panel">
+        <button class="info-toggle" onclick="toggleInfo()">
+            <span>Om projektet</span>
+            <span id="toggle-icon">−</span>
+        </button>
+        <div class="info-content open" id="info-content">
+            <h2>eDNA i nicheområder</h2>
+            <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt "eDNA i nicheområder – et redskab til at finde oversete invasive og rødlistede arter".</p>
+            <p>Projektet udføres i samarbejde mellem Erhvervsakademi København, Statens Naturhistoriske Museum og Miljøstyrelsen.</p>
+
+            <h3>Deltagelse</h3>
+            <p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på:</p>
+
+            <h3>Prøvetagning</h3> 
+            <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
+
+            <address>
+              <a class="contact-link"
+                 href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d"
+                 target="_blank"
+                 rel="noopener">
+                Peder Oxes Allé 2, 3400 Hillerød
+              </a>
+            </address>
+
+            <style>
+              .contact-link {
+                color: #000;
+                text-decoration: none;
+                transition: color 0.2s ease, text-decoration-color 0.2s ease;
+              }
+              .contact-link:hover,
+              .contact-link:focus {
+                color: #000;
+                text-decoration: underline;
+              }
+              .contact-link:focus {
+                outline: 2px solid rgba(0,0,0,0.25);
+                outline-offset: 2px;
+              }
+            </style>
+
+            <p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+            <h3>Gymnasieundervisning</h3>
+            <p>Det er muligt at tilmelde 10–12 gymnasieelever til en undervisningsdag hos os. Her kan eleverne medbringe egne prøver og deltage i analysen af dem.</p>
+
+            <h3>Studerende på EK Laboratorie og miljø</h3>
+            <p>Projektet indgår desuden som et frivilligt tilbud til studerende på laborant- og miljøteknologuddannelsen på Erhvervsakademi København.</p>
+
+            <h3>Kontaktinformation</h3>
+            <p>Navn: Søren Thromsholdt Christensen</p>
+
+            <p>
+              E-mail:
+              <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+            </p>
+
+            <style>
+              .contact-link {
+                color: #000;
+                text-decoration: none;
+                transition: color 0.2s ease, text-decoration-color 0.2s ease;
+              }
+              .contact-link:hover,
+              .contact-link:focus {
+                color: #000;
+                text-decoration: underline;
+              }
+              .contact-link:focus {
+                outline: 2px solid rgba(0,0,0,0.25); 
+                outline-offset: 2px;
+              }
+            </style>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">Artsregistrering</div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #28a745;"></div>
+            <span>Registreret i begge prøver</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #d4edda;"></div>
+            <span>Registreret i én prøve</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f8d7da;"></div>
+            <span>Ikke registreret</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e9ecef;"></div>
+            <span>Ikke analyseret</span>
+        </div>
+    </div>
+
+    <button class="download-btn" onclick="downloadData()">📥 Hent data</button>
+
+    <div class="loading" id="loading">Indlæser data...</div>
+
+    <script>
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
+
+        const SPECIES_COLUMNS = [
+            'Aborre', 'Trepigget hundestejle', 'Europæisk ål', 'Stor vandsalamander',
+            'Solaborre', 'Vandremusling', 'Lille vandsalamander', 'Prymnesium parvum',
+            'Flodkrebs', 'Signalkrebs', 'Galizisk sumpkrebs', 'Rødøret terrapin',
+            'Grønbroget tudse', 'Strandtudse', 'Europæisk malle', 'Karpe'
+        ];
+
+        // Initialize map centered on Denmark
+        const map = L.map('map').setView([55.9, 11.5], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        function toggleInfo() {
+            const content = document.getElementById('info-content');
+            const icon = document.getElementById('toggle-icon');
+            content.classList.toggle('open');
+            icon.textContent = content.classList.contains('open') ? '−' : '+';
+        }
+
+        function downloadData() {
+            const link = document.createElement('a');
+            link.href = CSV_URL;
+            link.download = 'edna-data.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function parseNumber(value) {
+            if (value === '' || value === null || value === undefined) return NaN;
+            return parseFloat(String(value).replace(',', '.'));
+        }
+
+        function getSpeciesClass(value) {
+            if (value === '' || value === null || value === undefined) return 'species-empty';
+            const num = parseInt(value);
+            if (num === 2) return 'species-2';
+            if (num === 1) return 'species-1';
+            if (num === 0) return 'species-0';
+            return 'species-empty';
+        }
+
+        function formatValue(value) {
+            if (value === '' || value === null || value === undefined) return '—';
+            return value;
+        }
+
+        function createPopupContent(row) {
+            const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
+            const provenr = row['Prøvenr.'] || '';
+            const dato = row['Indsamlingsdato'] || '';
+            const vandmiljo = row['Vandmiljø'] || '';
+            const filtreringsvolumen = row['Filtreringsvolumen'] || '';
+            const vandtemp = row['Vandtemperatur'] || '';
+            const ph = row['pH-værdi'] || '';
+            const salinitet = row['Salinitet'] || '';
+            const dybde = row['Vanddybde ved indsamlingssted'] || '';
+            const indsamlingsdybde = row['Indsamlingsdybde'] || '';
+            const bundforhold = row['Bundforhold/sediment'] || '';
+            const observationer = row['Evt. observerede organismer'] || '';
+            const bemaerkninger = row['Evt. bemærkninger'] || '';
+
+            let html = `<div class="popup-header">${lokalitet}</div>`;
+
+            // Site info
+            html += `<div class="popup-section">`;
+            html += `<div class="popup-section-title">Prøveinfo</div>`;
+            if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
+            if (dato) html += `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>`;
+            if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
+            html += `</div>`;
+
+            // Water parameters
+            const hasWaterParams = filtreringsvolumen || vandtemp || ph || salinitet || dybde || indsamlingsdybde || bundforhold;
+            if (hasWaterParams) {
+                html += `<div class="popup-section">`;
+                html += `<div class="popup-section-title">Vandparametre</div>`;
+                if (filtreringsvolumen) html += `<div class="popup-row"><span class="popup-label">Filtreringsvolumen</span><span class="popup-value">${filtreringsvolumen} ml</span></div>`;
+                if (vandtemp) html += `<div class="popup-row"><span class="popup-label">Temperatur</span><span class="popup-value">${vandtemp}°C</span></div>`;
+                if (ph) html += `<div class="popup-row"><span class="popup-label">pH</span><span class="popup-value">${ph}</span></div>`;
+                if (salinitet) html += `<div class="popup-row"><span class="popup-label">Salinitet</span><span class="popup-value">${salinitet}‰</span></div>`;
+                if (dybde) html += `<div class="popup-row"><span class="popup-label">Vanddybde</span><span class="popup-value">${dybde} cm</span></div>`;
+                if (indsamlingsdybde) html += `<div class="popup-row"><span class="popup-label">Indsamlingsdybde</span><span class="popup-value">${indsamlingsdybde} cm</span></div>`;
+                if (bundforhold) html += `<div class="popup-row"><span class="popup-label">Bundforhold</span><span class="popup-value">${bundforhold}</span></div>`;
+                html += `</div>`;
+            }
+
+            // Observations
+            if (observationer || bemaerkninger) {
+                html += `<div class="popup-section">`;
+                html += `<div class="popup-section-title">Observationer</div>`;
+                if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer}</span></div>`;
+                if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger}</span></div>`;
+                html += `</div>`;
+            }
+
+            // Species
+            html += `<div class="popup-section">`;
+            html += `<div class="popup-section-title">Arter</div>`;
+            html += `<div class="species-grid">`;
+
+            for (const species of SPECIES_COLUMNS) {
+                const value = row[species];
+                const cssClass = getSpeciesClass(value);
+                html += `<span class="species-badge ${cssClass}">${species}</span>`;
+            }
+
+            html += `</div></div>`;
+
+            return html;
+        }
+
+        // --- Filter logic state ---
+        let allMarkers = [];               // alle markører med data
+        let allBounds = [];                // alle bounds for nulstil/fit
+        const markers = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
+
+        // Hjælpere til filtrering
+
+        // CHANGED: simplere match – kræver præcis lighed (0,1,2). Tomme celler matches ikke.
+        function valueMatchesMode(cellValue, mode) {
+            // mode: '0' | '1' | '2'
+            const v = parseInt(cellValue, 10);
+            const m = parseInt(mode, 10);
+            if (Number.isNaN(v)) return false; // blank/NaN = ingen match
+            return v === m;
+        }
+
+        function getSelectedSpecies() {
+            const el = document.getElementById('speciesSelect');
+            return Array.from(el.selectedOptions).map(o => o.value);
+        }
+        function getPresenceMode() {
+            return document.getElementById('presenceSelect').value;
+        }
+        function getMatchAll() {
+            return document.getElementById('matchAll').checked;
+        }
+
+        function applyFilter({fit = false} = {}) {
+            const selectedSpecies = getSelectedSpecies();
+            const mode = getPresenceMode();
+            const matchAll = getMatchAll();
+
+            // CHANGED: vis alle hvis ingen art valgt
+            const showAll = (selectedSpecies.length === 0);
+
+            markers.clearLayers();
+
+            const kept = [];
+
+            for (const m of allMarkers) {
+                if (showAll) {
+                    kept.push(m);
+                    continue;
+                }
+                const row = m.featureData;
+                const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
+                const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
+                if (ok) kept.push(m);
+            }
+
+            if (kept.length > 0) {
+                markers.addLayers(kept);
+            }
+
+            if (fit) {
+                const b = kept.map(m => m.getLatLng());
+                if (b.length > 0) {
+                    const fitBounds = L.latLngBounds(b);
+                    map.fitBounds(fitBounds, { padding: [50, 50] });
+                }
+            }
+        }
+
+        function resetFilter() {
+            // nulstil UI
+            document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
+            document.getElementById('presenceSelect').value = '2';       // valgfrit: sæt default (2)
+            document.getElementById('matchAll').checked = false;
+
+            // vis alle markører
+            markers.clearLayers();
+            markers.addLayers(allMarkers);
+
+            // fit til alle
+            if (allBounds.length > 0) {
+                map.fitBounds(allBounds, { padding: [50, 50] });
+            }
+        }
+
+        // --- UI init ---
+        function initFilterUI() {
+            // udfyld arts-listen fra SPECIES_COLUMNS
+            const sel = document.getElementById('speciesSelect');
+            SPECIES_COLUMNS.forEach(sp => {
+                const opt = document.createElement('option');
+                opt.value = sp;
+                opt.textContent = sp;
+                sel.appendChild(opt);
+            });
+
+            document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({fit: true}));
+            document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
+
+            // Live-opdatering ved ændringer (uden auto-fit)
+            document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
+            document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
+            document.getElementById('matchAll').addEventListener('change', () => applyFilter());
+        }
+
+        map.addLayer(markers);
+
+        // Load and display data
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                document.getElementById('loading').style.display = 'none';
+
+                const bounds = [];
+
+                results.data.forEach(row => {
+                    const lat = parseNumber(row['Y-koordinat']);
