@@ -693,6 +693,17 @@ function dateMatches(rowDateStr, fromStr, toStr) {
       document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
       document.getElementById('dateTo').addEventListener('change', () => applyFilter());
 
+// Turn the species multiselect into a toggleable list
+document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
+  e.preventDefault(); // prevent default browser behavior
+
+  const option = e.target;
+  if (option.tagName === 'OPTION') {
+    option.selected = !option.selected; // toggle selection
+    option.dispatchEvent(new Event('change')); // trigger filter update
+  }
+});
+      
       // Toggle button
       document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
     }
