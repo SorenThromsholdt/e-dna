@@ -214,12 +214,15 @@
       outline-offset: 2px;
     }
 
-/* Move Leaflet zoom controls */
+
+/* Reposition AND ensure zoom buttons sit above everything */
 .leaflet-control-zoom {
   position: absolute !important;
-  bottom: 30px !important;   /* same height as 'Hent data' */
-  right: 10px !important;    /* 10px from the edge */
+  bottom: 30px !important;   /* align with Hent data */
+  right: 10px !important;    /* 10px from the window edge */
+  z-index: 2000 !important;  /* <- ensures they are visible */
 }
+
 
 
   </style>
