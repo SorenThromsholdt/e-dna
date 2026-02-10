@@ -414,58 +414,63 @@
       return value;
     }
 
-    // Robust date parsing: supports "yyyy-mm-dd" and Danish formats "dd-mm-yyyy", "dd/mm/yyyy", "dd.mm.yyyy"
-    function parseDanishOrISODate(str) {
-      if (!str) return null;
-      const s = String(str).trim();
 
-      // ISO (yyyy-mm-dd)
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-        const d = new Date(s + 'T00:00:00');
-        return Number.isNaN(d.getTime()) ? null : d;
-      }
+function parseShortDanishDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
 
-      // Danish (dd-mm-yyyy or dd/mm/yyyy or dd.mm.yyyy)
-      const m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/);
-      if (m) {
-        const day = parseInt(m[1], 10);
-        const month = parseInt(m[2], 10);
-        const year = parseInt(m[3], 10);
-        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-          const d = new Date(year, month - 1, day);
-          return Number.isNaN(d.getTime()) ? null : d;
-        }
-      }
+  // ISO format yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(s + "T00:00:00");
+    return isNaN(d) ? null : d;
+  }
 
-      // Fallback: let Date try (may be locale dependent)
-      const d = new Date(s);
-      return Number.isNaN(d.getTime()) ? null : d;
+  // Danish formats with 2- or 4-digit year
+  const match = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2}|\d{4})$/);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    let year = parseInt(match[3], 10);
+
+    // Convert 2-digit year
+    if (year < 100) {
+      year += 2000; // assumption: current project years are 2020–2035 range
     }
 
-    function parseDateFromInput(value) {
-      if (!value) return null; // HTML date input gives yyyy-mm-dd
-      const d = new Date(value + 'T00:00:00');
-      return Number.isNaN(d.getTime()) ? null : d;
-    }
+    const d = new Date(year, month, day);
+    return isNaN(d) ? null : d;
+  }
 
-    function dateMatches(rowDateStr, fromStr, toStr) {
-      const hasRange = !!fromStr || !!toStr;
-      if (!hasRange) return true;
+  return null;
+}
 
-      const rowDate = parseDanishOrISODate(rowDateStr);
-      if (!rowDate) return false; // If filtering by date and row date missing/unparsable -> exclude
+function parseDateFromInput(value) {
+  if (!value) return null;
+  const d = new Date(value + "T00:00:00");
+  return isNaN(d) ? null : d;
+}
 
-      const from = parseDateFromInput(fromStr);
-      const to = parseDateFromInput(toStr);
+function dateMatches(rowDateStr, fromStr, toStr) {
+  const hasRange = !!fromStr || !!toStr;
+  if (!hasRange) return true;
 
-      if (from && rowDate < from) return false;
-      if (to) {
-        // Make 'to' inclusive for the whole day by adding 1 day minus 1 ms
-        const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
-        if (rowDate >= toInclusive) return false;
-      }
-      return true;
-    }
+  const rowDate = parseShortDanishDate(rowDateStr);
+  if (!rowDate) return false;
+
+  const from = parseDateFromInput(fromStr);
+  const to = parseDateFromInput(toStr);
+
+  if (from && rowDate < from) return false;
+
+  if (to) {
+    // inclusive "to" end of day
+    const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+    if (rowDate >= toInclusive) return false;
+  }
+
+  return true;
+}
+
 
     function createPopupContent(row) {
       const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
@@ -607,7 +612,7 @@
         const row = m.featureData;
 
         // --- date filter ---
-        if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
+      if (!dateMatches(row['dato'], dateFrom, dateTo)) continue;
 
         // --- species filter ---
         if (!showAllSpecies) {
