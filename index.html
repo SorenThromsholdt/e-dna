@@ -612,7 +612,7 @@ function dateMatches(rowDateStr, fromStr, toStr) {
         const row = m.featureData;
 
         // --- date filter ---
-      if (!dateMatches(row['dato'], dateFrom, dateTo)) continue;
+      if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
 
         // --- species filter ---
         if (!showAllSpecies) {
