@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eDNA i nicheområder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            max-width: 350px;
+        }
+
+        .info-toggle {
+            background: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .info-toggle:hover {
+            background: #f5f5f5;
+        }
+
+        .info-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            padding: 20px;
+            margin-top: 10px;
+            display: none;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .info-content.open {
+            display: block;
+        }
+
+        .info-content h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #1a5f2a;
+        }
+
+        .info-content p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .info-content h3 {
+            font-size: 15px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: #1a5f2a;
+        }
+
+        .info-content address {
+            font-style: normal;
+            background: #f0f7f1;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* Popup styling */
+        .leaflet-popup-content {
+            min-width: 250px;
+            max-width: 320px;
+        }
+
+        .popup-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a5f2a;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .popup-section {
+            margin-bottom: 12px;
+        }
+
+        .popup-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 3px 0;
+        }
+
+        .popup-label {
+            color: #666;
+        }
+
+        .popup-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .species-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .species-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .species-2 {
+            background: #28a745;
+            color: #ffffff;
+        }
+
+        .species-1 {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .species-0 {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .species-empty {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 12px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 10px;
+        }
+
+        .download-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="info-panel">
+        <button class="info-toggle" onclick="toggleInfo()">
+            <span>Om projektet</span>
+            <span id="toggle-icon">−</span>
+        </button>
+        <div class="info-content open" id="info-content">
+            <h2>eDNA i nicheområder</h2>
+            <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt "eDNA i nicheområder – et redskab til at finde oversete invasive og rødlistede arter".</p>
+            <p>Projektet udføres i samarbejde mellem Erhvervsakademi København, Statens Naturhistoriske Museum og Miljøstyrelsen.</p>
+
+
+
+<h3>Deltagelse</h3>
+<p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på:</p>
+
+<h3>Prøvetagning</h3> 
+<p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
+
+
+<address>
+  <a class="contact-link"
+     href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d"
+     target="_blank"
+     rel="noopener">
+    Peder Oxes Allé 2, 3400 Hillerød
+  </a>
+</address>
+
+<style>
+  .contact-link {
+    color: #000;                 /* black */
+    text-decoration: none;       /* no underline by default */
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+
+  .contact-link:hover,
+  .contact-link:focus {
+    color: #000;                 /* stay black */
+    text-decoration: underline;  /* underline on hover/focus */
+  }
+
+  .contact-link:focus {
+    outline: 2px solid rgba(0,0,0,0.25);
+    outline-offset: 2px;
+  }
+</style>
+
+
+
+<p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+
+
+            <h3>Gymnasieundervisning</h3>
+            <p>Det er muligt at tilmelde 10–12 gymnasieelever til en undervisningsdag hos os. Her kan eleverne medbringe egne prøver og deltage i analysen af dem.</p>
+
+            <h3>Studerende på EK Laboratorie og miljø</h3>
+            <p>Projektet indgår desuden som et frivilligt tilbud til studerende på laborant- og miljøteknologuddannelsen på Erhvervsakademi København.</p>
+
+            <h3>Kontaktinformation</h3>
+            <p>Navn: Søren Thromsholdt Christensen</p>
+            
+
+<p>
+  E-mail:
+  <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+</p>
+
+<style>
+  .contact-link {
+    color: #000;                 /* black */
+    text-decoration: none;       /* no underline by default */
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+
+  .contact-link:hover,
+  .contact-link:focus {
+    color: #000;                 /* stay black */
+    text-decoration: underline;  /* underline on hover/focus */
+  }
+
+  .contact-link:focus {
+    outline: 2px solid rgba(0,0,0,0.25); 
+    outline-offset: 2px;
+  }
+</style>
+
+
+
+           
+
+
+            
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">Artsregistrering</div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #28a745;"></div>
+            <span>Registreret i begge prøver</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #d4edda;"></div>
+            <span>Registreret i én prøve</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f8d7da;"></div>
+            <span>Ikke registreret</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e9ecef;"></div>
+            <span>Ikke analyseret</span>
+        </div>
+    </div>
+
+    <button class="download-btn" onclick="downloadData()">📥 Hent data</button>
+
+    <div class="loading" id="loading">Indlæser data...</div>
+
+    <script>
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
+
+        const SPECIES_COLUMNS = [
+            'Aborre', 'Trepigget hundestejle', 'Europæisk ål', 'Stor vandsalamander',
+            'Solaborre', 'Vandremusling', 'Lille vandsalamander', 'Prymnesium parvum',
+            'Flodkrebs', 'Signalkrebs', 'Galizisk sumpkrebs', 'Rødøret terrapin',
+            'Grønbroget tudse', 'Strandtudse', 'Europæisk malle', 'Karpe'
+        ];
+
+        // Initialize map centered on Denmark
+        const map = L.map('map').setView([55.9, 11.5], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        function toggleInfo() {
+            const content = document.getElementById('info-content');
+            const icon = document.getElementById('toggle-icon');
+            content.classList.toggle('open');
+            icon.textContent = content.classList.contains('open') ? '−' : '+';
+        }
+
+        function downloadData() {
+            const link = document.createElement('a');
+            link.href = CSV_URL;
+            link.download = 'edna-data.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function parseNumber(value) {
+            if (value === '' || value === null || value === undefined) return NaN;
+            return parseFloat(String(value).replace(',', '.'));
+        }
+
+        function getSpeciesClass(value) {
+            if (value === '' || value === null || value === undefined) return 'species-empty';
+            const num = parseInt(value);
+            if (num === 2) return 'species-2';
+            if (num === 1) return 'species-1';
+            if (num === 0) return 'species-0';
+            return 'species-empty';
+        }
+
+        function formatValue(value) {
+            if (value === '' || value === null || value === undefined) return '—';
+            return value;
+        }
+
+        function createPopupContent(row) {
+            const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
+            const provenr = row['Prøvenr.'] || '';
+            const dato = row['Indsamlingsdato'] || '';
+            const vandmiljo = row['Vandmiljø'] || '';
+            const filtreringsvolumen = row['Filtreringsvolumen'] || '';
+            const vandtemp = row['Vandtemperatur'] || '';
+            const ph = row['pH-værdi'] || '';
+            const salinitet = row['Salinitet'] || '';
+            const dybde = row['Vanddybde ved indsamlingssted'] || '';
+            const indsamlingsdybde = row['Indsamlingsdybde'] || '';
+            const bundforhold = row['Bundforhold/sediment'] || '';
+            const observationer = row['Evt. observerede organismer'] || '';
+            const bemaerkninger = row['Evt. bemærkninger'] || '';
+
+            let html = `<div class="popup-header">${lokalitet}</div>`;
+
+            // Site info
+            html += `<div class="popup-section">`;
+            html += `<div class="popup-section-title">Prøveinfo</div>`;
+            if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
+            if (dato) html += `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>`;
+            if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
+            html += `</div>`;
+
+            // Water parameters
+            const hasWaterParams = filtreringsvolumen || vandtemp || ph || salinitet || dybde || indsamlingsdybde || bundforhold;
+            if (hasWaterParams) {
+                html += `<div class="popup-section">`;
+                html += `<div class="popup-section-title">Vandparametre</div>`;
+                if (filtreringsvolumen) html += `<div class="popup-row"><span class="popup-label">Filtreringsvolumen</span><span class="popup-value">${filtreringsvolumen} ml</span></div>`;
+                if (vandtemp) html += `<div class="popup-row"><span class="popup-label">Temperatur</span><span class="popup-value">${vandtemp}°C</span></div>`;
+                if (ph) html += `<div class="popup-row"><span class="popup-label">pH</span><span class="popup-value">${ph}</span></div>`;
+                if (salinitet) html += `<div class="popup-row"><span class="popup-label">Salinitet</span><span class="popup-value">${salinitet}‰</span></div>`;
+                if (dybde) html += `<div class="popup-row"><span class="popup-label">Vanddybde</span><span class="popup-value">${dybde} cm</span></div>`;
+                if (indsamlingsdybde) html += `<div class="popup-row"><span class="popup-label">Indsamlingsdybde</span><span class="popup-value">${indsamlingsdybde} cm</span></div>`;
+                if (bundforhold) html += `<div class="popup-row"><span class="popup-label">Bundforhold</span><span class="popup-value">${bundforhold}</span></div>`;
+                html += `</div>`;
+            }
+
+            // Observations
+            if (observationer || bemaerkninger) {
+                html += `<div class="popup-section">`;
+                html += `<div class="popup-section-title">Observationer</div>`;
+                if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer}</span></div>`;
+                if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger}</span></div>`;
+                html += `</div>`;
+            }
+
+            // Species
+            html += `<div class="popup-section">`;
+            html += `<div class="popup-section-title">Arter</div>`;
+            html += `<div class="species-grid">`;
+
+            for (const species of SPECIES_COLUMNS) {
+                const value = row[species];
+                const cssClass = getSpeciesClass(value);
+                html += `<span class="species-badge ${cssClass}">${species}</span>`;
+            }
+
+            html += `</div></div>`;
+
+            return html;
+        }
+
+        // Load and display data
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                document.getElementById('loading').style.display = 'none';
+
+                const bounds = [];
+                const markers = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                });
+
+                results.data.forEach(row => {
+                    const lat = parseNumber(row['Y-koordinat']);
+                    const lng = parseNumber(row['X-koordinat']);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const marker = L.marker([lat, lng]);
+                        marker.bindPopup(createPopupContent(row), {
+                            maxWidth: 350,
+                            maxHeight: 400
+                        });
+                        markers.addLayer(marker);
+                        bounds.push([lat, lng]);
+                    }
+                });
+
+                map.addLayer(markers);
+
+                // Fit map to show all markers
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            },
+            error: function(error) {
+                document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
+                console.error('CSV parsing error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
