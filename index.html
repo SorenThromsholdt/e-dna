@@ -115,14 +115,18 @@
     }
 
     
-/* Move Leaflet zoom buttons to bottom-right */
-.leaflet-control-zoom {
-  position: absolute !important;
-  bottom: 90px !important;   /* vertical position above the "Hent data" button */
-  right: 20px !important;    /* horizontal distance from the right edge */
-  left: auto !important;
-  top: auto !important;
+
+/* Place Leaflet zoom controls bottom-right safely */
+.leaflet-control-container .leaflet-bottom.leaflet-right {
+  right: 10px;      /* aligns with your Hent data button */
+  bottom: 80px;     /* height above the “Hent data” button */
 }
+
+.leaflet-control-zoom {
+  margin-bottom: 0px !important;
+  margin-right: 0px !important;
+}
+
   
 
 
