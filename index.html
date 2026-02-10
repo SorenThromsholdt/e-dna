@@ -9,7 +9,7 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    integrity=""
     crossorigin=""
   />
   <link
@@ -181,6 +181,7 @@
     .btn-primary { background: #1a5f2a; color: white; }
     .btn-primary:hover { background: #154c21; }
 
+    /* Simple link styling used in info panel */
     .contact-link {
       color: #000;
       text-decoration: none;
@@ -196,6 +197,11 @@
       outline-offset: 2px;
     }
   </style>
+
+  <!-- JS libs (defer ensures they are parsed without blocking and available when our app runs) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" defer></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
   <div id="map"></div>
@@ -253,7 +259,7 @@
       <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
       <address>
-        <a class="contact-link" href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d" target="_blank" rel="noopener">
+        <a class="contact-link" href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d" target="_blank" rel="noopener noreferrer">
           Peder Oxes Allé 2, 3400 Hillerød
         </a>
       </address>
@@ -269,8 +275,7 @@
       <h3>Kontaktinformation</h3>
       <p>Navn: Søren Thromsholdt Christensen</p>
       <p>
-        E‑mail:
-        <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+        E‑mail: <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
       </p>
     </div>
   </div>
@@ -300,18 +305,8 @@
 
   <div class="loading" id="loading">Indlæser data...</div>
 
-  <!-- JS libs (defer ensures they load before our code runs) -->
-  <script
-    defer
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script defer src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <!-- App code -->
-  <script defer>
+  <!-- App code (placed at end so DOM exists when it runs) -->
+  <script>
     // --- Config ---
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
 
@@ -323,27 +318,20 @@
     ];
 
     // --- Map init ---
-    let map, markers;
-    let allMarkers = [];
-    let allBounds = [];
+    const map = L.map('map').setView([55.9, 11.5], 7);
 
-    function initMap() {
-      map = L.map('map').setView([55.9, 11.5], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
-      }).addTo(map);
-
-      markers = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true
-      });
-
-      map.addLayer(markers);
-    }
+    // Cluster layer
+    const markers = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true
+    });
+    map.addLayer(markers);
 
     // --- UI toggles ---
     function toggleInfo() {
@@ -404,6 +392,7 @@
 
       let html = `<div class="popup-header">${lokalitet}</div>`;
 
+      // Prøveinfo
       html += `<div class="popup-section">`;
       html += `<div class="popup-section-title">Prøveinfo</div>`;
       if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
@@ -411,6 +400,7 @@
       if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
       html += `</div>`;
 
+      // Vandparametre
       const hasWaterParams = filtreringsvolumen || vandtemp || ph || salinitet || dybde || indsamlingsdybde || bundforhold;
       if (hasWaterParams) {
         html += `<div class="popup-section">`;
@@ -425,6 +415,7 @@
         html += `</div>`;
       }
 
+      // Observationer
       if (observationer || bemaerkninger) {
         html += `<div class="popup-section">`;
         html += `<div class="popup-section-title">Observationer</div>`;
@@ -433,6 +424,7 @@
         html += `</div>`;
       }
 
+      // Arter
       html += `<div class="popup-section">`;
       html += `<div class="popup-section-title">Arter</div>`;
       html += `<div class="species-grid">`;
@@ -446,13 +438,20 @@
       return html;
     }
 
-    // --- Filter helpers ---
+    // --- Filter state ---
+    let allMarkers = [];
+    let allBounds = [];
+
     function valueMatchesMode(cellValue, mode) {
       // mode: 'absent' | 'one' | 'both'
       const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
-      if (v === '') return false; // treat empty as 'not analyzed' -> not matching 0/1/2
+      if (v === '') {
+        // Treat empty as "not analyzed" -> does not match 0/1/2 modes
+        return false;
+      }
       const n = parseInt(v, 10);
       if (Number.isNaN(n)) return false;
+
       switch (mode) {
         case 'both': return n === 2;
         case 'one':  return n === 1;
@@ -477,13 +476,17 @@
       const mode = getPresenceMode(); // 'absent' | 'one' | 'both'
       const matchAll = getMatchAll();
 
+      // If no species selected -> show everything
       const showAll = (selectedSpecies.length === 0);
 
       markers.clearLayers();
       const kept = [];
 
       for (const m of allMarkers) {
-        if (showAll) { kept.push(m); continue; }
+        if (showAll) {
+          kept.push(m);
+          continue;
+        }
         const row = m.featureData;
         const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
         const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
@@ -537,60 +540,53 @@
       document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
       document.getElementById('matchAll').addEventListener('change', () => applyFilter());
 
-      // Toggle button binding (this is what makes the click work)
+      // Toggle button
       document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
     }
 
-    function loadData() {
-      Papa.parse(CSV_URL, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          document.getElementById('loading').style.display = 'none';
+    // Load and display data
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        document.getElementById('loading').style.display = 'none';
 
-          const bounds = [];
+        const bounds = [];
 
-          results.data.forEach(row => {
-            const lat = parseNumber(row['Y-koordinat']);
-            const lng = parseNumber(row['X-koordinat']);
+        results.data.forEach(row => {
+          const lat = parseNumber(row['Y-koordinat']);
+          const lng = parseNumber(row['X-koordinat']);
 
-            if (!isNaN(lat) && !isNaN(lng)) {
-              const marker = L.marker([lat, lng]);
-              marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
-              marker.featureData = row; // gem data på markøren til filtrering
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const marker = L.marker([lat, lng]);
+            marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
+            marker.featureData = row; // gem data på markøren til filtrering
 
-              allMarkers.push(marker);
-              bounds.push([lat, lng]);
-            }
-          });
-
-          // Tilføj alle markører første gang
-          markers.addLayers(allMarkers);
-
-          // Gem total-bounds til reset
-          allBounds = bounds;
-
-          // Fit map to show all markers
-          if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+            allMarkers.push(marker);
+            bounds.push([lat, lng]);
           }
+        });
 
-          // init filter-UI når data er klar
-          initFilterUI();
-        },
-        error: function(error) {
-          document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
-          console.error('CSV parsing error:', error);
+        // Tilføj alle markører første gang
+        markers.addLayers(allMarkers);
+
+        // Gem total-bounds til reset
+        allBounds = bounds;
+
+        // Fit map to show all markers
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50] });
         }
-      });
-    }
 
-    // Initialize everything after scripts load (because we used defer)
-    (function bootstrap() {
-      initMap();
-      loadData();
-    })();
+        // init filter-UI når data er klar
+        initFilterUI();
+      },
+      error: function(error) {
+        document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
+        console.error('CSV parsing error:', error);
+      }
+    });
   </script>
 </body>
 </html>
