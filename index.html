@@ -142,7 +142,7 @@
     .filter-panel {
       position: absolute;
       top: 10px;
-      left: 10px; /* moved to the right so it doesn't cover the zoom controls */
+      left: 60px; /* moved to the right so it doesn't cover the zoom controls */
       z-index: 1000;
       background: white;
       padding: 12px 14px;
@@ -213,15 +213,6 @@
       outline: 2px solid rgba(0,0,0,0.25);
       outline-offset: 2px;
     }
-
-
-/* Reposition AND ensure zoom buttons sit above everything */
-.leaflet-control-zoom {
-  position: absolute !important;
-  bottom: 30px !important;   /* align with Hent data */
-  right: 10px !important;    /* 10px from the window edge */
-  z-index: 2000 !important;  /* <- ensures they are visible */
-}
 
 
 
