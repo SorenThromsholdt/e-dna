@@ -1,20 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>eDNA i nicheområder</title>
-    https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
-    https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css
-    https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css
-    https://unpkg.com/leaflet@1.9.4/dist/leaflet.js</script>
-    https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js</script>
-    https://unpkg.com/papaparse@5.4.1/papaparse.min.js</script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
-        #map { width: 100vw; height: 100vh; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
 
         .info-panel {
             position: absolute;
@@ -38,7 +48,10 @@
             gap: 8px;
             margin-left: auto;
         }
-        .info-toggle:hover { background: #f5f5f5; }
+
+        .info-toggle:hover {
+            background: #f5f5f5;
+        }
 
         .info-content {
             background: white;
@@ -50,132 +63,184 @@
             max-height: 70vh;
             overflow-y: auto;
         }
-        .info-content.open { display: block; }
 
-        .info-content h2 { font-size: 18px; margin-bottom: 12px; color: #1a5f2a; }
-        .info-content p { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 12px; }
-        .info-content h3 { font-size: 15px; margin-top: 16px; margin-bottom: 8px; color: #1a5f2a; }
+        .info-content.open {
+            display: block;
+        }
+
+        .info-content h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #1a5f2a;
+        }
+
+        .info-content p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .info-content h3 {
+            font-size: 15px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: #1a5f2a;
+        }
+
         .info-content address {
-            font-style: normal; background: #f0f7f1; padding: 8px 12px; border-radius: 4px; font-size: 13px;
+            font-style: normal;
+            background: #f0f7f1;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
         /* Popup styling */
-        .leaflet-popup-content { min-width: 250px; max-width: 320px; }
-        .popup-header {
-            font-size: 16px; font-weight: 600; color: #1a5f2a;
-            margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;
+        .leaflet-popup-content {
+            min-width: 250px;
+            max-width: 320px;
         }
-        .popup-section { margin-bottom: 12px; }
-        .popup-section-title {
-            font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .popup-row {
-            display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0;
-        }
-        .popup-label { color: #666; }
-        .popup-value { font-weight: 500; color: #333; }
 
-        .species-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-        .species-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-        .species-2 { background: #28a745; color: #ffffff; }
-        .species-1 { background: #d4edda; color: #155724; }
-        .species-0 { background: #f8d7da; color: #721c24; }
-        .species-empty { background: #e9ecef; color: #6c757d; }
+        .popup-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a5f2a;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .popup-section {
+            margin-bottom: 12px;
+        }
+
+        .popup-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 3px 0;
+        }
+
+        .popup-label {
+            color: #666;
+        }
+
+        .popup-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .species-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .species-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .species-2 {
+            background: #28a745;
+            color: #ffffff;
+        }
+
+        .species-1 {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .species-0 {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .species-empty {
+            background: #e9ecef;
+            color: #6c757d;
+        }
 
         .legend {
-            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
-            background: white; padding: 12px 15px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
-        }
-        .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
-        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-        .legend-color { width: 16px; height: 16px; border-radius: 10px; }
-
-        .download-btn {
-            position: absolute; bottom: 30px; right: 10px; z-index: 1000;
-            background: white; border: none; padding: 10px 15px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
-            font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
-        }
-        .download-btn:hover { background: #f5f5f5; }
-
-        .loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 1000; background: white; padding: 20px 30px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
-        }
-
-        /* NEW: Filter panel */
-        .filter-panel {
             position: absolute;
-            top: 10px;
-            left: 10px;           /* modsat info-panel */
+            bottom: 30px;
+            left: 10px;
             z-index: 1000;
             background: white;
-            padding: 12px 14px;
+            padding: 12px 15px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-            width: 280px;
+            font-size: 12px;
         }
-        .filter-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1a5f2a; }
-        .filter-group { margin-bottom: 10px; }
-        .filter-label { font-size: 12px; color: #444; margin-bottom: 4px; display: block; }
-        .filter-select, .filter-multiselect {
-            width: 100%;
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 10px;
+        }
+
+        .download-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
             font-size: 13px;
-            padding: 6px 8px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: #fff;
+            font-weight: 500;
+            color: #333;
+            transition: background 0.2s;
         }
-        .filter-multiselect { height: 140px; }
-        .filter-row { display: flex; align-items: center; gap: 8px; }
-        .filter-actions { display: flex; gap: 8px; }
-        .btn {
-            border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
-            background: #f1f3f5; color: #333;
+
+        .download-btn:hover {
+            background: #f5f5f5;
         }
-        .btn:hover { background: #e9ecef; }
-        .btn-primary { background: #1a5f2a; color: white; }
-        .btn-primary:hover { background: #154c21; }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-
-    <!-- NEW: Filter panel -->
-    <div class="filter-panel" aria-label="Filter for arter">
-        <div class="filter-title">Filtrer efter art</div>
-
-        <div class="filter-group">
-            <label class="filter-label" for="speciesSelect">Vælg art(er)</label>
-            <select id="speciesSelect" class="filter-multiselect" multiple></select>
-        </div>
-
-        <div class="filter-group">
-            <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
-            <select id="presenceSelect" class="filter-select">
-                <option value="any">Alle</option>
-                <option value="present">Registreret (≥1)</option>
-                <option value="both">Begge prøver (=2)</option>
-                <option value="one">Én prøve (=1)</option>
-                <option value="absent">Ikke registreret (=0)</option>
-                <option value="na">Ikke analyseret (tom)</option>
-            </select>
-        </div>
-
-        <div class="filter-group filter-row">
-            <input type="checkbox" id="matchAll" />
-            <label for="matchAll" style="font-size: 12px; color: #333;">Match alle valgte arter</label>
-        </div>
-
-        <div class="filter-actions">
-            <button class="btn btn-primary" id="applyFilterBtn">Anvend filter</button>
-            <button class="btn" id="resetFilterBtn">Nulstil</button>
-        </div>
-    </div>
-    <!-- /Filter panel -->
 
     <div class="info-panel">
         <button class="info-toggle" onclick="toggleInfo()">
@@ -187,36 +252,48 @@
             <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt "eDNA i nicheområder – et redskab til at finde oversete invasive og rødlistede arter".</p>
             <p>Projektet udføres i samarbejde mellem Erhvervsakademi København, Statens Naturhistoriske Museum og Miljøstyrelsen.</p>
 
-            <h3>Deltagelse</h3>
-            <p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på:</p>
 
-            <h3>Prøvetagning</h3> 
-            <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
-            <address>
-              https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d
-                Peder Oxes Allé 2, 3400 Hillerød
-              </a>
-            </address>
+<h3>Deltagelse</h3>
+<p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på:</p>
 
-            <style>
-              .contact-link {
-                color: #000;
-                text-decoration: none;
-                transition: color 0.2s ease, text-decoration-color 0.2s ease;
-              }
-              .contact-link:hover,
-              .contact-link:focus {
-                color: #000;
-                text-decoration: underline;
-              }
-              .contact-link:focus {
-                outline: 2px solid rgba(0,0,0,0.25);
-                outline-offset: 2px;
-              }
-            </style>
+<h3>Prøvetagning</h3> 
+<p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
-            <p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+<address>
+  <a class="contact-link"
+     href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d"
+     target="_blank"
+     rel="noopener">
+    Peder Oxes Allé 2, 3400 Hillerød
+  </a>
+</address>
+
+<style>
+  .contact-link {
+    color: #000;                 /* black */
+    text-decoration: none;       /* no underline by default */
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+
+  .contact-link:hover,
+  .contact-link:focus {
+    color: #000;                 /* stay black */
+    text-decoration: underline;  /* underline on hover/focus */
+  }
+
+  .contact-link:focus {
+    outline: 2px solid rgba(0,0,0,0.25);
+    outline-offset: 2px;
+  }
+</style>
+
+
+
+<p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+
 
             <h3>Gymnasieundervisning</h3>
             <p>Det er muligt at tilmelde 10–12 gymnasieelever til en undervisningsdag hos os. Her kan eleverne medbringe egne prøver og deltage i analysen af dem.</p>
@@ -226,28 +303,38 @@
 
             <h3>Kontaktinformation</h3>
             <p>Navn: Søren Thromsholdt Christensen</p>
+            
 
-            <p>
-              E-mail:
-              mailto:stc@ek.dkstc@ek.dk</a>
-            </p>
+<p>
+  E-mail:
+  <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+</p>
 
-            <style>
-              .contact-link {
-                color: #000;
-                text-decoration: none;
-                transition: color 0.2s ease, text-decoration-color 0.2s ease;
-              }
-              .contact-link:hover,
-              .contact-link:focus {
-                color: #000;
-                text-decoration: underline;
-              }
-              .contact-link:focus {
-                outline: 2px solid rgba(0,0,0,0.25); 
-                outline-offset: 2px;
-              }
-            </style>
+<style>
+  .contact-link {
+    color: #000;                 /* black */
+    text-decoration: none;       /* no underline by default */
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+
+  .contact-link:hover,
+  .contact-link:focus {
+    color: #000;                 /* stay black */
+    text-decoration: underline;  /* underline on hover/focus */
+  }
+
+  .contact-link:focus {
+    outline: 2px solid rgba(0,0,0,0.25); 
+    outline-offset: 2px;
+  }
+</style>
+
+
+
+           
+
+
+            
         </div>
     </div>
 
@@ -289,7 +376,7 @@
         const map = L.map('map').setView([55.9, 11.5], 7);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; https://www.openstreetmap.org/copyrightOpenStreetMap</a>'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
         function toggleInfo() {
@@ -392,123 +479,6 @@
             return html;
         }
 
-        // --- NEW: Filter logic state ---
-        let allMarkers = [];               // alle markører med data
-        let allBounds = [];                // alle bounds for nulstil/fit
-        const markers = L.markerClusterGroup({
-            maxClusterRadius: 50,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true
-        });
-
-        // Hjælpere til filtrering
-        function valueMatchesMode(cellValue, mode) {
-            // cellValue kan være '' | '0'|'1'|'2' | evt. null/undefined
-            const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
-            if (mode === 'any') return true;
-            if (mode === 'na') return v === '';
-            if (v === '') return false; // for øvrige modes gælder tom ikke
-
-            const n = parseInt(v, 10);
-            if (Number.isNaN(n)) return false;
-
-            switch (mode) {
-                case 'present': return n >= 1;
-                case 'both':    return n === 2;
-                case 'one':     return n === 1;
-                case 'absent':  return n === 0;
-                default: return true;
-            }
-        }
-
-        function getSelectedSpecies() {
-            const el = document.getElementById('speciesSelect');
-            return Array.from(el.selectedOptions).map(o => o.value);
-        }
-        function getPresenceMode() {
-            return document.getElementById('presenceSelect').value;
-        }
-        function getMatchAll() {
-            return document.getElementById('matchAll').checked;
-        }
-
-        function applyFilter({fit = false} = {}) {
-            const selectedSpecies = getSelectedSpecies();
-            const mode = getPresenceMode();
-            const matchAll = getMatchAll();
-
-            // hvis ingen art valgt eller "Alle" valgt => vis alle
-            const showAll = (selectedSpecies.length === 0) || (mode === 'any');
-
-            // tøm klyngen og genindsæt de markører der matcher
-            markers.clearLayers();
-
-            const kept = [];
-
-            for (const m of allMarkers) {
-                if (showAll) {
-                    kept.push(m);
-                    continue;
-                }
-                const row = m.featureData;
-                const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
-                const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
-                if (ok) kept.push(m);
-            }
-
-            if (kept.length > 0) {
-                markers.addLayers(kept);
-            }
-
-            if (fit) {
-                // hvis vi fitter efter filter, brug bounds for de beholdte markører
-                const b = kept.map(m => m.getLatLng());
-                if (b.length > 0) {
-                    const fitBounds = L.latLngBounds(b);
-                    map.fitBounds(fitBounds, { padding: [50, 50] });
-                }
-            }
-        }
-
-        function resetFilter() {
-            // nulstil UI
-            document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
-            document.getElementById('presenceSelect').value = 'any';
-            document.getElementById('matchAll').checked = false;
-
-            // vis alle markører
-            markers.clearLayers();
-            markers.addLayers(allMarkers);
-
-            // fit til alle
-            if (allBounds.length > 0) {
-                map.fitBounds(allBounds, { padding: [50, 50] });
-            }
-        }
-
-        // --- NEW: UI init ---
-        function initFilterUI() {
-            // udfyld arts-listen fra SPECIES_COLUMNS
-            const sel = document.getElementById('speciesSelect');
-            SPECIES_COLUMNS.forEach(sp => {
-                const opt = document.createElement('option');
-                opt.value = sp;
-                opt.textContent = sp;
-                sel.appendChild(opt);
-            });
-
-            document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({fit: true}));
-            document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
-
-            // Live-opdatering ved ændringer (uden auto-fit)
-            document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
-            document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
-            document.getElementById('matchAll').addEventListener('change', () => applyFilter());
-        }
-
-        map.addLayer(markers);
-
         // Load and display data
         Papa.parse(CSV_URL, {
             download: true,
@@ -518,6 +488,12 @@
                 document.getElementById('loading').style.display = 'none';
 
                 const bounds = [];
+                const markers = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                });
 
                 results.data.forEach(row => {
                     const lat = parseNumber(row['Y-koordinat']);
@@ -525,28 +501,21 @@
 
                     if (!isNaN(lat) && !isNaN(lng)) {
                         const marker = L.marker([lat, lng]);
-                        marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
-                        // NEW: gem data på markøren til filtrering
-                        marker.featureData = row;
-
-                        allMarkers.push(marker);
+                        marker.bindPopup(createPopupContent(row), {
+                            maxWidth: 350,
+                            maxHeight: 400
+                        });
+                        markers.addLayer(marker);
                         bounds.push([lat, lng]);
                     }
                 });
 
-                // Tilføj alle markører første gang
-                markers.addLayers(allMarkers);
-
-                // Gem total-bounds til reset
-                allBounds = bounds;
+                map.addLayer(markers);
 
                 // Fit map to show all markers
                 if (bounds.length > 0) {
                     map.fitBounds(bounds, { padding: [50, 50] });
                 }
-
-                // NEW: init filter-UI når data er klar
-                initFilterUI();
             },
             error: function(error) {
                 document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
