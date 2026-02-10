@@ -114,19 +114,6 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
     }
 
-    
-
-/* Place Leaflet zoom controls bottom-right safely */
-.leaflet-control-container .leaflet-bottom.leaflet-right {
-  right: 10px;      /* aligns with your Hent data button */
-  bottom: 80px;     /* height above the “Hent data” button */
-}
-
-.leaflet-control-zoom {
-  margin-bottom: 0px !important;
-  margin-right: 0px !important;
-}
-
   
 
 
@@ -228,14 +215,11 @@
     }
 
 
-* Move zoom controls to bottom-right safely */
-.leaflet-control-container .leaflet-bottom.leaflet-right {
-    right: 10px !important;    /* align with Hent data button */
-    bottom: 80px !important;   /* position above the Hent data button */
-}
 
-.leaflet-control-zoom {
-    margin: 0 !important;      /* prevent Leaflet from adding spacing */
+/* Place zoom control just above the "Hent data" button */
+.leaflet-control-container .leaflet-bottom.leaflet-right {
+    right: 10px !important;
+    bottom: 80px !important; /* adjust as needed */
 }
 
 
