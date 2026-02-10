@@ -114,36 +114,38 @@
     }
 
     /* --- Filter toggle button --- */
-.filter-toggle {
-    position: absolute;
-    top: 10px;
-    left: 60px;   /* moved right */
-    z-index: 1001;
-    background: white;
-    border: none;
-    padding: 10px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+    .filter-toggle {
+      position: absolute;
+      top: 10px;
+      left: 60px; /* moved right to avoid overlap with zoom controls */
+      z-index: 1001;
+      background: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-toggle:hover { background: #f5f5f5; }
 
-.filter-panel {
-    position: absolute;
-    top: 10px;
-    left: 60px;   /* moved right */
-    z-index: 1000;
-    background: white;
-    padding: 12px 14px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-    width: 280px;
-    transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
-}
+    /* Filter panel */
+    .filter-panel {
+      position: absolute;
+      top: 10px;
+      left: 60px; /* moved right together with toggle */
+      z-index: 1000;
+      background: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      width: 280px;
+      transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+    }
     /* Provide space so panel sits below the toggle button */
     .filter-panel.with-toggle-offset { margin-top: 46px; }
 
@@ -179,7 +181,6 @@
     .btn-primary { background: #1a5f2a; color: white; }
     .btn-primary:hover { background: #154c21; }
 
-    /* Simple link styling used in info panel */
     .contact-link {
       color: #000;
       text-decoration: none;
@@ -199,14 +200,14 @@
 <body>
   <div id="map"></div>
 
-  <!-- Filter toggle -->
-  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="true">
+  <!-- Filter toggle (starts collapsed: aria-expanded="false" and + icon) -->
+  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="false">
     <span>Filtrering</span>
-    <span id="filterToggleIcon">−</span>
+    <span id="filterToggleIcon">＋</span>
   </button>
 
-  <!-- Filter panel -->
-<div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
+  <!-- Filter panel (starts collapsed via is-collapsed) -->
+  <div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
     <div class="filter-title">Filtrer efter art</div>
 
     <div class="filter-group">
@@ -252,8 +253,7 @@
       <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
       <address>
-        <a class="contact-link" target="_blank" rel="noopener"
-           href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d">
+        <a class="contact-link" href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d" target="_blank" rel="noopener">
           Peder Oxes Allé 2, 3400 Hillerød
         </a>
       </address>
@@ -268,7 +268,6 @@
 
       <h3>Kontaktinformation</h3>
       <p>Navn: Søren Thromsholdt Christensen</p>
-
       <p>
         E‑mail:
         <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
@@ -301,16 +300,18 @@
 
   <div class="loading" id="loading">Indlæser data...</div>
 
-  <!-- JS libs -->
+  <!-- JS libs (defer ensures they load before our code runs) -->
   <script
+    defer
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script defer src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <script>
+  <!-- App code -->
+  <script defer>
     // --- Config ---
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
 
@@ -322,280 +323,5 @@
     ];
 
     // --- Map init ---
-    const map = L.map('map').setView([55.9, 11.5], 7);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // --- UI toggles ---
-    function toggleInfo() {
-      const content = document.getElementById('info-content');
-      const icon = document.getElementById('toggle-icon');
-      content.classList.toggle('open');
-      icon.textContent = content.classList.contains('open') ? '−' : '+';
-    }
-
-    function togglePanel() {
-      const panel = document.getElementById('Panel');
-      const btn = document.getElementById('filterToggle');
-      const icon = document.getElementById('filterToggleIcon');
-
-      const collapsed = panel.classList.toggle('is-collapsed');
-      btn.setAttribute('aria-expanded', (!collapsed).toString());
-      icon.textContent = collapsed ? '＋' : '−';
-    }
-
-    function downloadData() {
-      const link = document.createElement('a');
-      link.href = CSV_URL;
-      link.download = 'edna-data.csv';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    // --- Helpers ---
-    function parseNumber(value) {
-      if (value === '' || value === null || value === undefined) return NaN;
-      return parseFloat(String(value).replace(',', '.'));
-    }
-
-    function getSpeciesClass(value) {
-      if (value === '' || value === null || value === undefined) return 'species-empty';
-      const num = parseInt(value);
-      if (num === 2) return 'species-2';
-      if (num === 1) return 'species-1';
-      if (num === 0) return 'species-0';
-      return 'species-empty';
-    }
-
-    function formatValue(value) {
-      if (value === '' || value === null || value === undefined) return '—';
-      return value;
-    }
-
-    function createPopupContent(row) {
-      const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
-      const provenr = row['Prøvenr.'] || '';
-      const dato = row['Indsamlingsdato'] || '';
-      const vandmiljo = row['Vandmiljø'] || '';
-      const filtreringsvolumen = row['Filtreringsvolumen'] || '';
-      const vandtemp = row['Vandtemperatur'] || '';
-      const ph = row['pH-værdi'] || '';
-      const salinitet = row['Salinitet'] || '';
-      const dybde = row['Vanddybde ved indsamlingssted'] || '';
-      const indsamlingsdybde = row['Indsamlingsdybde'] || '';
-      const bundforhold = row['Bundforhold/sediment'] || '';
-      const observationer = row['Evt. observerede organismer'] || '';
-      const bemaerkninger = row['Evt. bemærkninger'] || '';
-
-      let html = `<div class="popup-header">${lokalitet}</div>`;
-
-      // Prøveinfo
-      html += `<div class="popup-section">`;
-      html += `<div class="popup-section-title">Prøveinfo</div>`;
-      if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
-      if (dato) html += `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>`;
-      if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
-      html += `</div>`;
-
-      // Vandparametre
-      const hasWaterParams = filtreringsvolumen || vandtemp || ph || salinitet || dybde || indsamlingsdybde || bundforhold;
-      if (hasWaterParams) {
-        html += `<div class="popup-section">`;
-        html += `<div class="popup-section-title">Vandparametre</div>`;
-        if (filtreringsvolumen) html += `<div class="popup-row"><span class="popup-label">Filtreringsvolumen</span><span class="popup-value">${filtreringsvolumen} ml</span></div>`;
-        if (vandtemp) html += `<div class="popup-row"><span class="popup-label">Temperatur</span><span class="popup-value">${vandtemp}°C</span></div>`;
-        if (ph) html += `<div class="popup-row"><span class="popup-label">pH</span><span class="popup-value">${ph}</span></div>`;
-        if (salinitet) html += `<div class="popup-row"><span class="popup-label">Salinitet</span><span class="popup-value">${salinitet}‰</span></div>`;
-        if (dybde) html += `<div class="popup-row"><span class="popup-label">Vanddybde</span><span class="popup-value">${dybde} cm</span></div>`;
-        if (indsamlingsdybde) html += `<div class="popup-row"><span class="popup-label">Indsamlingsdybde</span><span class="popup-value">${indsamlingsdybde} cm</span></div>`;
-        if (bundforhold) html += `<div class="popup-row"><span class="popup-label">Bundforhold</span><span class="popup-value">${bundforhold}</span></div>`;
-        html += `</div>`;
-      }
-
-      // Observationer
-      if (observationer || bemaerkninger) {
-        html += `<div class="popup-section">`;
-        html += `<div class="popup-section-title">Observationer</div>`;
-        if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer}</span></div>`;
-        if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger}</span></div>`;
-        html += `</div>`;
-      }
-
-      // Arter
-      html += `<div class="popup-section">`;
-      html += `<div class="popup-section-title">Arter</div>`;
-      html += `<div class="species-grid">`;
-      for (const species of SPECIES_COLUMNS) {
-        const value = row[species];
-        const cssClass = getSpeciesClass(value);
-        html += `<span class="species-badge ${cssClass}">${species}</span>`;
-      }
-      html += `</div></div>`;
-
-      return html;
-    }
-
-    // --- Filter state ---
+    let map, markers;
     let allMarkers = [];
-    let allBounds = [];
-    const markers = L.markerClusterGroup({
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true
-    });
-
-    function valueMatchesMode(cellValue, mode) {
-      // mode: 'absent' | 'one' | 'both'
-      const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
-      if (v === '') {
-        // Consider empty as "not analyzed" -> never matches the 3 explicit modes
-        return false;
-      }
-      const n = parseInt(v, 10);
-      if (Number.isNaN(n)) return false;
-
-      switch (mode) {
-        case 'both': return n === 2;
-        case 'one':  return n === 1;
-        case 'absent': return n === 0;
-        default: return false;
-      }
-    }
-
-    function getSelectedSpecies() {
-      const el = document.getElementById('speciesSelect');
-      return Array.from(el.selectedOptions).map(o => o.value);
-    }
-    function getPresenceMode() {
-      return document.getElementById('presenceSelect').value;
-    }
-    function getMatchAll() {
-      return document.getElementById('matchAll').checked;
-    }
-
-    function applyFilter({ fit = false } = {}) {
-      const selectedSpecies = getSelectedSpecies();
-      const mode = getPresenceMode(); // 'absent' | 'one' | 'both'
-      const matchAll = getMatchAll();
-
-      // If no species selected -> show everything
-      const showAll = (selectedSpecies.length === 0);
-
-      markers.clearLayers();
-      const kept = [];
-
-      for (const m of allMarkers) {
-        if (showAll) {
-          kept.push(m);
-          continue;
-        }
-        const row = m.featureData;
-        const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
-        const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
-        if (ok) kept.push(m);
-      }
-
-      if (kept.length > 0) {
-        markers.addLayers(kept);
-      }
-
-      if (fit) {
-        const b = kept.map(m => m.getLatLng());
-        if (b.length > 0) {
-          const fitBounds = L.latLngBounds(b);
-          map.fitBounds(fitBounds, { padding: [50, 50] });
-        }
-      }
-    }
-
-    function resetFilter() {
-      // Nulstil UI
-      document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
-      document.getElementById('presenceSelect').value = 'absent';
-      document.getElementById('matchAll').checked = false;
-
-      // Vis alle markører
-      markers.clearLayers();
-      markers.addLayers(allMarkers);
-
-      // Fit til alle
-      if (allBounds.length > 0) {
-        map.fitBounds(allBounds, { padding: [50, 50] });
-      }
-    }
-
-    function initFilterUI() {
-      // udfyld arts-listen fra SPECIES_COLUMNS
-      const sel = document.getElementById('speciesSelect');
-      SPECIES_COLUMNS.forEach(sp => {
-        const opt = document.createElement('option');
-        opt.value = sp;
-        opt.textContent = sp;
-        sel.appendChild(opt);
-      });
-
-      document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
-      document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
-
-      // Live-opdatering ved ændringer (uden auto-fit)
-      document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
-      document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
-      document.getElementById('matchAll').addEventListener('change', () => applyFilter());
-
-      // Toggle button
-      document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
-    }
-
-    map.addLayer(markers);
-
-    // Load and display data
-    Papa.parse(CSV_URL, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: function(results) {
-        document.getElementById('loading').style.display = 'none';
-
-        const bounds = [];
-
-        results.data.forEach(row => {
-          const lat = parseNumber(row['Y-koordinat']);
-          const lng = parseNumber(row['X-koordinat']);
-
-          if (!isNaN(lat) && !isNaN(lng)) {
-            const marker = L.marker([lat, lng]);
-            marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
-            marker.featureData = row; // gem data på markøren til filtrering
-
-            allMarkers.push(marker);
-            bounds.push([lat, lng]);
-          }
-        });
-
-        // Tilføj alle markører første gang
-        markers.addLayers(allMarkers);
-
-        // Gem total-bounds til reset
-        allBounds = bounds;
-
-        // Fit map to show all markers
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [50, 50] });
-        }
-
-        // init filter-UI når data er klar
-        initFilterUI();
-      },
-      error: function(error) {
-        document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
-        console.error('CSV parsing error:', error);
-      }
-    });
-  </script>
-</body>
-</html>
