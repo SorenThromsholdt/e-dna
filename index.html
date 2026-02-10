@@ -114,6 +114,19 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
     }
 
+    
+/* Move Leaflet zoom buttons to bottom-right */
+.leaflet-control-zoom {
+  position: absolute !important;
+  bottom: 90px !important;   /* vertical position above the "Hent data" button */
+  right: 20px !important;    /* horizontal distance from the right edge */
+  left: auto !important;
+  top: auto !important;
+}
+  
+
+
+    
     /* --- Filter toggle button --- */
     .filter-toggle {
       position: absolute;
