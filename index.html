@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="da">
 <head>
@@ -117,7 +118,7 @@
     .filter-toggle {
       position: absolute;
       top: 10px;
-      left: 10px;
+      left: 120px; /* moved to the right so it doesn't cover the zoom controls */
       z-index: 1001;
       background: white;
       border: none;
@@ -137,7 +138,7 @@
     .filter-panel {
       position: absolute;
       top: 10px;
-      left: 10px;
+      left: 120px; /* moved to the right so it doesn't cover the zoom controls */
       z-index: 1000;
       background: white;
       padding: 12px 14px;
@@ -171,8 +172,8 @@
       background: #fff;
     }
     .filter-multiselect { height: 140px; }
-    .filter-row { display: flex; align-items: center; gap: 8px; }
-    .filter-actions { display: flex; gap: 8px; }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .btn {
       border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
       background: #f1f3f5; color: #333;
@@ -180,6 +181,18 @@
     .btn:hover { background: #e9ecef; }
     .btn-primary { background: #1a5f2a; color: white; }
     .btn-primary:hover { background: #154c21; }
+
+    /* Filter badge */
+    .filter-badge {
+      background:#1a5f2a;
+      color:white;
+      padding:4px 10px;
+      border-radius:12px;
+      font-size:12px;
+      display:none;
+      width:fit-content;
+      margin-top:8px;
+    }
 
     /* Simple link styling used in info panel */
     .contact-link {
@@ -202,13 +215,13 @@
   <div id="map"></div>
 
   <!-- Filter toggle -->
-  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="true">
+  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="false">
     <span>Filtrering</span>
-    <span id="filterToggleIcon">−</span>
+    <span id="filterToggleIcon">＋</span>
   </button>
 
-  <!-- Filter panel -->
-  <div class="filter-panel with-toggle-offset" id="filterPanel" aria-label="Filter for arter">
+  <!-- Filter panel (starts collapsed) -->
+  <div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
     <div class="filter-title">Filtrer efter art</div>
 
     <div class="filter-group">
@@ -230,9 +243,20 @@
       <label for="matchAll" style="font-size: 12px; color: #333;">Match alle valgte arter</label>
     </div>
 
+    <!-- Date filter -->
+    <div class="filter-group">
+      <label class="filter-label">Prøvetagningsdato</label>
+      <div class="filter-row">
+        <input type="date" id="dateFrom" class="filter-select" />
+        <span style="font-size:12px;">til</span>
+        <input type="date" id="dateTo" class="filter-select" />
+      </div>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" id="applyFilterBtn">Anvend filter</button>
       <button class="btn" id="resetFilterBtn">Nulstil</button>
+      <div id="filterBadge" class="filter-badge"></div>
     </div>
   </div>
 
@@ -349,10 +373,22 @@
       icon.textContent = collapsed ? '＋' : '−';
     }
 
+    // --- Download only filtered data ---
     function downloadData() {
+      // Take whatever is currently present in the marker cluster (i.e., already filtered)
+      const filtered = markers.getLayers().map(m => m.featureData);
+
+      if (filtered.length === 0) {
+        alert("Ingen filtrerede data at downloade.");
+        return;
+      }
+
+      const csv = Papa.unparse(filtered);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement('a');
-      link.href = CSV_URL;
-      link.download = 'edna-data.csv';
+
+      link.href = URL.createObjectURL(blob);
+      link.download = "edna-filtered.csv";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -366,7 +402,7 @@
 
     function getSpeciesClass(value) {
       if (value === '' || value === null || value === undefined) return 'species-empty';
-      const num = parseInt(value);
+      const num = parseInt(value, 10);
       if (num === 2) return 'species-2';
       if (num === 1) return 'species-1';
       if (num === 0) return 'species-0';
@@ -376,6 +412,59 @@
     function formatValue(value) {
       if (value === '' || value === null || value === undefined) return '—';
       return value;
+    }
+
+    // Robust date parsing: supports "yyyy-mm-dd" and Danish formats "dd-mm-yyyy", "dd/mm/yyyy", "dd.mm.yyyy"
+    function parseDanishOrISODate(str) {
+      if (!str) return null;
+      const s = String(str).trim();
+
+      // ISO (yyyy-mm-dd)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const d = new Date(s + 'T00:00:00');
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+
+      // Danish (dd-mm-yyyy or dd/mm/yyyy or dd.mm.yyyy)
+      const m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/);
+      if (m) {
+        const day = parseInt(m[1], 10);
+        const month = parseInt(m[2], 10);
+        const year = parseInt(m[3], 10);
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          const d = new Date(year, month - 1, day);
+          return Number.isNaN(d.getTime()) ? null : d;
+        }
+      }
+
+      // Fallback: let Date try (may be locale dependent)
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function parseDateFromInput(value) {
+      if (!value) return null; // HTML date input gives yyyy-mm-dd
+      const d = new Date(value + 'T00:00:00');
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function dateMatches(rowDateStr, fromStr, toStr) {
+      const hasRange = !!fromStr || !!toStr;
+      if (!hasRange) return true;
+
+      const rowDate = parseDanishOrISODate(rowDateStr);
+      if (!rowDate) return false; // If filtering by date and row date missing/unparsable -> exclude
+
+      const from = parseDateFromInput(fromStr);
+      const to = parseDateFromInput(toStr);
+
+      if (from && rowDate < from) return false;
+      if (to) {
+        // Make 'to' inclusive for the whole day by adding 1 day minus 1 ms
+        const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+        if (rowDate >= toInclusive) return false;
+      }
+      return true;
     }
 
     function createPopupContent(row) {
@@ -480,38 +569,65 @@
       return document.getElementById('matchAll').checked;
     }
 
+    function updateBadge(count) {
+      const badge = document.getElementById("filterBadge");
+      if (count === allMarkers.length || count === 0) {
+        // Show badge if a filter is active but resulted in 0? We'll display '0 resultater'
+        // Determine if any filter is active:
+        const anySpecies = getSelectedSpecies().length > 0;
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const hasDate = !!dateFrom || !!dateTo;
+
+        if (anySpecies || hasDate) {
+          badge.style.display = "inline-block";
+          badge.textContent = `${count} resultater`;
+        } else {
+          badge.style.display = "none";
+        }
+      } else {
+        badge.style.display = "inline-block";
+        badge.textContent = `${count} resultater`;
+      }
+    }
+
     function applyFilter({ fit = false } = {}) {
       const selectedSpecies = getSelectedSpecies();
       const mode = getPresenceMode(); // 'absent' | 'one' | 'both'
       const matchAll = getMatchAll();
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
 
-      // If no species selected -> show everything
-      const showAll = (selectedSpecies.length === 0);
+      const showAllSpecies = (selectedSpecies.length === 0);
 
       markers.clearLayers();
       const kept = [];
 
       for (const m of allMarkers) {
-        if (showAll) {
-          kept.push(m);
-          continue;
-        }
         const row = m.featureData;
-        const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
-        const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
-        if (ok) kept.push(m);
+
+        // --- date filter ---
+        if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
+
+        // --- species filter ---
+        if (!showAllSpecies) {
+          const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
+          const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
+          if (!ok) continue;
+        }
+
+        kept.push(m);
       }
 
       if (kept.length > 0) {
         markers.addLayers(kept);
       }
 
-      if (fit) {
+      updateBadge(kept.length);
+
+      if (fit && kept.length > 0) {
         const b = kept.map(m => m.getLatLng());
-        if (b.length > 0) {
-          const fitBounds = L.latLngBounds(b);
-          map.fitBounds(fitBounds, { padding: [50, 50] });
-        }
+        map.fitBounds(L.latLngBounds(b), { padding: [50, 50] });
       }
     }
 
@@ -520,10 +636,15 @@
       document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
       document.getElementById('presenceSelect').value = 'absent';
       document.getElementById('matchAll').checked = false;
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
 
       // Vis alle markører
       markers.clearLayers();
       markers.addLayers(allMarkers);
+
+      // Badge off
+      updateBadge(allMarkers.length);
 
       // Fit til alle
       if (allBounds.length > 0) {
@@ -548,6 +669,8 @@
       document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
       document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
       document.getElementById('matchAll').addEventListener('change', () => applyFilter());
+      document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
+      document.getElementById('dateTo').addEventListener('change', () => applyFilter());
 
       // Toggle button
       document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
@@ -592,6 +715,9 @@
 
         // init filter-UI når data er klar
         initFilterUI();
+
+        // Init badge to hidden / full count
+        updateBadge(allMarkers.length);
       },
       error: function(error) {
         document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
