@@ -9,7 +9,7 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity=""
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
   <link
@@ -117,7 +117,7 @@
     .filter-toggle {
       position: absolute;
       top: 10px;
-      left: 60px; /* moved right to avoid overlap with zoom controls */
+      left: 10px;
       z-index: 1001;
       background: white;
       border: none;
@@ -137,7 +137,7 @@
     .filter-panel {
       position: absolute;
       top: 10px;
-      left: 60px; /* moved right together with toggle */
+      left: 10px;
       z-index: 1000;
       background: white;
       padding: 12px 14px;
@@ -197,23 +197,18 @@
       outline-offset: 2px;
     }
   </style>
-
-  <!-- JS libs (defer ensures they are parsed without blocking and available when our app runs) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" defer></script>
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Filter toggle (starts collapsed: aria-expanded="false" and + icon) -->
-  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="false">
+  <!-- Filter toggle -->
+  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="true">
     <span>Filtrering</span>
-    <span id="filterToggleIcon">＋</span>
+    <span id="filterToggleIcon">−</span>
   </button>
 
-  <!-- Filter panel (starts collapsed via is-collapsed) -->
-  <div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
+  <!-- Filter panel -->
+  <div class="filter-panel with-toggle-offset" id="filterPanel" aria-label="Filter for arter">
     <div class="filter-title">Filtrer efter art</div>
 
     <div class="filter-group">
@@ -259,7 +254,8 @@
       <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
 
       <address>
-        <a class="contact-link" href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d" target="_blank" rel="noopener noreferrer">
+        <a class="contact-link" target="_blank" rel="noopener"
+           href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d">
           Peder Oxes Allé 2, 3400 Hillerød
         </a>
       </address>
@@ -274,8 +270,10 @@
 
       <h3>Kontaktinformation</h3>
       <p>Navn: Søren Thromsholdt Christensen</p>
+
       <p>
-        E‑mail: <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+        E‑mail:
+        <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
       </p>
     </div>
   </div>
@@ -305,7 +303,15 @@
 
   <div class="loading" id="loading">Indlæser data...</div>
 
-  <!-- App code (placed at end so DOM exists when it runs) -->
+  <!-- JS libs -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
   <script>
     // --- Config ---
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
@@ -321,17 +327,9 @@
     const map = L.map('map').setView([55.9, 11.5], 7);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
     }).addTo(map);
-
-    // Cluster layer
-    const markers = L.markerClusterGroup({
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true
-    });
-    map.addLayer(markers);
 
     // --- UI toggles ---
     function toggleInfo() {
@@ -373,6 +371,11 @@
       if (num === 1) return 'species-1';
       if (num === 0) return 'species-0';
       return 'species-empty';
+    }
+
+    function formatValue(value) {
+      if (value === '' || value === null || value === undefined) return '—';
+      return value;
     }
 
     function createPopupContent(row) {
@@ -441,12 +444,18 @@
     // --- Filter state ---
     let allMarkers = [];
     let allBounds = [];
+    const markers = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true
+    });
 
     function valueMatchesMode(cellValue, mode) {
       // mode: 'absent' | 'one' | 'both'
       const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
       if (v === '') {
-        // Treat empty as "not analyzed" -> does not match 0/1/2 modes
+        // Consider empty as "not analyzed" -> never matches the 3 explicit modes
         return false;
       }
       const n = parseInt(v, 10);
@@ -543,6 +552,8 @@
       // Toggle button
       document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
     }
+
+    map.addLayer(markers);
 
     // Load and display data
     Papa.parse(CSV_URL, {
