@@ -340,6 +340,13 @@ html, body {
     <div id="speciesSelect" class="species-list"></div>
     </div>
 
+    
+<div class="filter-actions" style="margin-top:6px;">
+  <button class="btn" id="selectAllSpeciesBtn">Vælg alle</button>
+  <button class="btn" id="clearAllSpeciesBtn">Ryd alle</button>
+</div>
+
+
     <div class="filter-group">
       <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
       <select id="presenceSelect" class="filter-select">
@@ -706,6 +713,24 @@ function getSelectedSpecies() {
       return document.getElementById('matchAll').checked;
     }
 
+    function anyFilterActive() {
+  const speciesChosen = getSelectedSpecies().length > 0;
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  return speciesChosen || !!dateFrom || !!dateTo; // presenceSelect virker kun når arter er valgt
+}
+
+function updateBadge(count) {
+  const badge = document.getElementById("filterBadge");
+  if (!anyFilterActive()) {
+    badge.style.display = "none";
+    return;
+  }
+  badge.style.display = "inline-block";
+  badge.textContent = `${count} resultater`;
+}
+``
+
     function updateBadge(count) {
       const badge = document.getElementById("filterBadge");
       if (count === allMarkers.length || count === 0) {
@@ -767,72 +792,83 @@ function getSelectedSpecies() {
       }
     }
 
-    function resetFilter() {
-      // Nulstil UI
-      document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
-      document.getElementById('presenceSelect').value = 'absent';
-      document.getElementById('matchAll').checked = false;
-      document.getElementById('dateFrom').value = '';
-      document.getElementById('dateTo').value = '';
 
-      // Vis alle markører
-      markers.clearLayers();
-      markers.addLayers(allMarkers);
+function resetFilter() {
+  // Ryd arter (alle checkbokse til false)
+  document.querySelectorAll('#speciesSelect input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+  });
 
-      // Badge off
-      updateBadge(allMarkers.length);
+  // Nulstil øvrige felter
+  document.getElementById('presenceSelect').value = 'absent';
+  document.getElementById('matchAll').checked = false;
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
 
-      // Fit til alle
-      if (allBounds.length > 0) {
-        map.fitBounds(allBounds, { padding: [50, 50] });
-      }
-    }
+  // Vis alle markører
+  markers.clearLayers();
+  markers.addLayers(allMarkers);
+
+  // Badge off / fuldt antal
+  updateBadge(allMarkers.length);
+
+  // Fit til alle
+  if (allBounds.length > 0) {
+    map.fitBounds(allBounds, { padding: [50, 50] });
+  }
+}
+
 
     function initFilterUI() {
-      // udfyld arts-listen fra SPECIES_COLUMNS
-     const list = document.getElementById('speciesSelect');
-SPECIES_COLUMNS.forEach(sp => {
-  const div = document.createElement('div');
-  div.className = 'species-item';
+  const list = document.getElementById('speciesSelect');
+  list.innerHTML = ''; // defensivt: ryd containeren
 
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.value = sp;
-  cb.addEventListener('change', () => applyFilter());
+  SPECIES_COLUMNS.forEach((sp, idx) => {
+    const div = document.createElement('div');
+    div.className = 'species-item';
 
-  const label = document.createElement('label');
-  label.textContent = sp;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = sp;
+    cb.id = `species_${idx}`;
+    cb.addEventListener('change', () => applyFilter());
 
-  div.appendChild(cb);
-  div.appendChild(label);
-  list.appendChild(div);
+    const label = document.createElement('label');
+    label.textContent = sp;
+    label.htmlFor = cb.id;
+
+    div.appendChild(cb);
+    div.appendChild(label);
+    list.appendChild(div);
+  });
+
+
+document.getElementById('selectAllSpeciesBtn').addEventListener('click', () => {
+  document.querySelectorAll('#speciesSelect input[type="checkbox"]').forEach(cb => cb.checked = true);
+  applyFilter({ fit: true });
 });
 
+document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
+  document.querySelectorAll('#speciesSelect input[type="checkbox"]').forEach(cb => cb.checked = false);
+  applyFilter({ fit: true });
+});
 
-      document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
-      document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
+      
+  // Knapper
+  document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
+  document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
 
-      // Live-opdatering ved ændringer (uden auto-fit)
-      document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
-      document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
-      document.getElementById('matchAll').addEventListener('change', () => applyFilter());
-      document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
-      document.getElementById('dateTo').addEventListener('change', () => applyFilter());
+  // Live‑opdatering ved ændringer (uden auto‑fit)
+  document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
+  document.getElementById('matchAll').addEventListener('change', () => applyFilter());
+  document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
+  document.getElementById('dateTo').addEventListener('change', () => applyFilter());
 
-      // Turn the species multiselect into a toggleable list
-      document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
-        e.preventDefault(); // prevent default browser behavior
-
-        const option = e.target;
-        if (option.tagName === 'OPTION') {
-          option.selected = !option.selected; // toggle selection
-          option.dispatchEvent(new Event('change')); // trigger filter update
-        }
-      });
-
-      // Toggle button
-      document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
-    }
+  // Fjern gamle select/multiselect‑rester (de skal ikke bruges med checkbokse)
+  // (Ingen 'change' / 'mousedown' lyttere på #speciesSelect mere)
+  // Toggle-knappen
+  document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
+}
 
     map.addLayer(markers);
 
