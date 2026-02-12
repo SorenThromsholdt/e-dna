@@ -425,6 +425,49 @@
      .info-content.open { display: block; } */
 }
 
+    
+/* === Prevent top panels from overlapping the legend === */
+
+/* Tune these if needed */
+:root {
+  --ui-top-safe: 10px;         /* distance from top to your panels */
+  --ui-gap: 8px;               /* minor spacing, not critical */
+  --legend-bottom-safe: 140px; /* reserve space for the legend at bottom */
+}
+
+/* Info panel content scrolls within a capped height */
+.info-content {
+  /* Reserve bottom space so we don't overlap the legend */
+  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  overflow-y: auto;
+}
+
+/* Filter panel (the dropdown body) also needs a cap */
+.filter-panel {
+  /* When expanded, keep it from growing into the legend area */
+  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  overflow-y: auto;
+}
+
+/* Make sure the legend is clickable if things get tight */
+.legend {
+  z-index: 1200;
+}
+
+/* Mobile tuning: panels share the top row, so we reduce height a bit more */
+@media (max-width: 600px) {
+  :root {
+    /* Phones usually have less vertical space; reserve a bit extra */
+    --legend-bottom-safe: 160px;
+  }
+
+  .info-content,
+  .filter-panel {
+    max-height: calc(100vh - 56px - var(--legend-bottom-safe)); /* 56px ~ toggles row height */
+  }
+}
+``
+
 
     
   </style>
@@ -962,6 +1005,20 @@ document.getElementById('speciesSelect').addEventListener('mousedown', function 
           }
         });
 
+        // Dynamically reserve space for the legend so panels don't overlap it
+function setLegendSafeArea() {
+  const legend = document.querySelector('.legend');
+  if (!legend) return;
+  // Height + some breathing room
+  const h = legend.offsetHeight + 20; // px
+  document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+}
+
+// Run on load and on resize/orientation change
+window.addEventListener('load', setLegendSafeArea);
+window.addEventListener('resize', setLegendSafeArea);
+window.addEventListener('orientationchange', setLegendSafeArea);
+        
         // Tilføj alle markører første gang
         markers.addLayers(allMarkers);
 
