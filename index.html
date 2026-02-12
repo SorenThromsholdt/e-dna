@@ -1,77 +1,248 @@
-
 <!DOCTYPE html>
-<html lang=\"da\">
+<html lang="da">
 <head>
-  <meta charset=\"UTF-8\" />
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>eDNA i nicheområder</title>
 
   <!-- Leaflet & MarkerCluster CSS -->
   <link
-    rel=\"stylesheet\"
-    href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\"
-    integrity=\"sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=\"
-    crossorigin=\"\"
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
   />
   <link
-    rel=\"stylesheet\"
-    href=\"https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css\"
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
   />
   <link
-    rel=\"stylesheet\"
-    href=\"https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css\"
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
   />
 
   <style>
+    /* ========== Base / Layout ========== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden; /* prevent page scrolling; panels/map handle their own scrolling */
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       color: #111;
     }
 
-    #map {
-      width: 100vw;
-      height: 100dvh;
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      overflow: hidden;
-    }
+    /* Use dynamic viewport height so mobile browser UI doesn’t break layout */
+    #map { width: 100vw; height: 100dvh; }
 
+    /* ========== Variables (JS updates --legend-bottom-safe) ========== */
     :root{
-      --ui-top-safe: 10px;
-      --toggle-row-height: 46px;
-      --info-toggle-row: 44px;
-      --legend-bottom-safe: 170px;
+      --ui-top-safe: 10px;          /* distance from top edge to panels */
+      --toggle-row-height: 46px;    /* filter panel drops below its toggle (.with-toggle-offset) */
+      --info-toggle-row: 44px;      /* approx. height of the info toggle (button) */
+      --legend-bottom-safe: 170px;  /* fallback; will be measured precisely by JS */
     }
 
-    /* Info panel */
-    .info-panel { position: absolute; top: var(--ui-top-safe); right: 10px; z-index: 1000; max-width: min(350px, 80vw); }
-    .info-toggle { background: white; border: none; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: space-between; }
-    .info-content { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); padding: 20px; margin-top: 10px; display: none; max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row) - 10px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    /* ========== Info panel (top-right) ========== */
+    .info-panel {
+      position: absolute;
+      top: var(--ui-top-safe);
+      right: 10px;
+      z-index: 1000;
+      max-width: min(350px, 80vw);
+    }
+
+    .info-toggle {
+      background: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      width: 100%;
+      justify-content: space-between;
+    }
+    .info-toggle:hover { background: #f5f5f5; }
+
+    .info-content {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      padding: 20px;
+      margin-top: 10px;
+      display: none; /* toggled by .open */
+      /* KEY: scroll inside; ensure we leave ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row) - 10px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* Android bonus: vertical pan only inside panel */
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
     .info-content.open { display: block; }
+    .info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
+    .info-content.open       { opacity: 1; transform: translateY(0); }
 
-    /* Filters */
-    .filter-toggle { position: absolute; top: var(--ui-top-safe); left: 60px; z-index: 1300; background: white; border: none; padding: 10px 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-    .filter-panel { position: absolute; top: var(--ui-top-safe); left: 60px; z-index: 1000; background: white; padding: 12px 14px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); width: min(280px, 70vw); max-width: 90vw; transition: 0.2s ease; max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--toggle-row-height)); overflow-y: auto; }
-    .filter-panel.is-collapsed { max-height: 0 !important; padding: 0 !important; margin-top: 0 !important; opacity: 0; overflow: hidden; pointer-events: none; }
+    .info-content h2 { font-size: 18px; margin-bottom: 12px; color: #1a5f2a; }
+    .info-content p { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 12px; }
+    .info-content h3 { font-size: 15px; margin-top: 16px; margin-bottom: 8px; color: #1a5f2a; }
+    .info-content address {
+      font-style: normal; background: #f0f7f1; padding: 8px 12px; border-radius: 4px; font-size: 13px;
+    }
 
-    .filter-badge { background:#1a5f2a; color:white; padding:4px 10px; border-radius:12px; font-size:12px; display:none; width:fit-content; margin-top:8px; }
+    /* ========== Filter toggle & panel (top-left) ========== */
+    .filter-toggle {
+      position: absolute;
+      top: var(--ui-top-safe);
+      left: 60px; /* desktop/tablet: offset from zoom controls */
+      z-index: 1300; /* keep button above panels for easy tapping */
+      background: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-toggle:hover { background: #f5f5f5; }
 
-    .species-list { border: 1px solid #ddd; border-radius: 6px; padding: 6px; height: 140px; overflow-y: auto; background: #fff; }
-    .species-item { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 0; }
+    .filter-panel {
+      position: absolute;
+      top: var(--ui-top-safe);
+      left: 60px; /* desktop/tablet: offset from zoom controls */
+      z-index: 1000;
+      background: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      width: min(280px, 70vw);
+      max-width: 90vw;
+      transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
 
-    /* Legend */
-    .legend { position: absolute; bottom: 30px; left: 10px; z-index: 1100; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px; }
+      /* KEY: scroll inside; ensure we leave ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--toggle-row-height));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* Android bonus */
+    }
 
-    .download-btn { position: absolute; bottom: 30px; right: 10px; z-index: 1000; background: white; border: none; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer; font-size: 13px; font-weight: 500; }
+    /* Provide space so panel sits below the toggle button */
+    .filter-panel.with-toggle-offset { margin-top: var(--toggle-row-height); }
 
-    /* Popup styles (optional) */
+    /* Collapsed state (hidden) */
+    .filter-panel.is-collapsed {
+      max-height: 0 !important;
+      padding: 0 0 !important;
+      margin-top: 0 !important;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .filter-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1a5f2a; }
+    .filter-group { margin-bottom: 10px; }
+    .filter-label { font-size: 12px; color: #444; margin-bottom: 4px; display: block; }
+    .filter-select, .filter-multiselect {
+      width: 100%;
+      font-size: 13px;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+    }
+    .filter-multiselect { height: 140px; }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+      background: #f1f3f5; color: #333;
+    }
+    .btn:hover { background: #e9ecef; }
+    .btn-primary { background: #1a5f2a; color: white; }
+    .btn-primary:hover { background: #154c21; }
+
+    /* Filter badge */
+    .filter-badge {
+      background:#1a5f2a;
+      color:white;
+      padding:4px 10px;
+      border-radius:12px;
+      font-size:12px;
+      display:none;
+      width:fit-content;
+      margin-top:8px;
+    }
+
+    /* ========== Legend & other fixed UI ========== */
+    .legend {
+      position: absolute;
+      bottom: 30px; left: 10px;
+      z-index: 1100; /* above map, below toggles */
+      background: white; padding: 12px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
+    }
+    .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .legend-color { width: 16px; height: 16px; border-radius: 10px; }
+
+    .download-btn {
+      position: absolute; bottom: 30px; right: 10px; z-index: 1000;
+      background: white; border: none; padding: 10px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
+      font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
+    }
+    .download-btn:hover { background: #f5f5f5; }
+
+    .loading {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 1000; background: white; padding: 20px 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
+    }
+
+    /* Links inside info panel */
+    .contact-link {
+      color: #000;
+      text-decoration: none;
+      transition: color 0.2s ease, text-decoration-color 0.2s ease;
+    }
+    .contact-link:hover,
+    .contact-link:focus {
+      color: #000;
+      text-decoration: underline;
+    }
+    .contact-link:focus {
+      outline: 2px solid rgba(0,0,0,0.25);
+      outline-offset: 2px;
+    }
+
+    /* ========== Leaflet popups ========== */
     .leaflet-popup-content { min-width: 250px; max-width: 320px; }
-    .popup-header { font-size: 16px; font-weight: 600; color: #1a5f2a; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0; }
+    .popup-header {
+      font-size: 16px; font-weight: 600; color: #1a5f2a;
+      margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;
+    }
     .popup-section { margin-bottom: 12px; }
-    .popup-section-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .popup-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .popup-section-title {
+      font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .popup-row {
+      display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0;
+    }
     .popup-label { color: #666; }
     .popup-value { font-weight: 500; color: #333; }
 
@@ -81,239 +252,655 @@
     .species-1 { background: #d4edda; color: #155724; }
     .species-0 { background: #f8d7da; color: #721c24; }
     .species-empty { background: #e9ecef; color: #6c757d; }
+
+    /* ========== Mobile layout tweaks ========== */
+    @media (max-width: 600px) {
+      /* give zoom a tiny margin from the edge */
+      .leaflet-top.leaflet-left { margin-top: 10px; margin-left: 10px; }
+
+      /* Filtrering to the right of zoom control */
+      .filter-toggle {
+        left: calc(10px + 36px + 13px) !important; /* zoom(~36px) + gap */
+        top: var(--ui-top-safe) !important;
+      }
+      .filter-panel {
+        left: calc(10px + 36px + 13px) !important;
+        top: var(--ui-top-safe) !important;
+        right: auto !important;
+        width: auto !important;
+        max-width: 55vw;
+      }
+
+      /* Om projektet remains top-right */
+      .info-panel {
+        top: var(--ui-top-safe);
+        right: 10px;
+        left: auto !important;
+        width: auto;
+        max-width: 55vw;
+      }
+
+      /* Keep bottom UI tidy on narrow screens */
+      .legend { left: 10px; right: 10px; }
+      .download-btn { right: 10px; }
+    }
+
+
+/* Prevent the entire page from scrolling on mobile */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none; /* key fix for Android Chrome */
+}
+
+/* Map container must not allow page scroll */
+#map {
+  height: 100dvh;         /* mobile-safe full height */
+  overflow: hidden;       /* prevents scroll tunneling */
+  touch-action: none;     /* prevents accidental “page move” */
+  position: fixed;        /* ensures it pins the viewport */
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+    .species-list {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px;
+  height: 140px;
+  overflow-y: auto;
+  background: #fff;
+}
+.species-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+    
   </style>
 </head>
 <body>
-  <div id=\"map\"></div>
+  <div id="map"></div>
 
-  <!-- Filter Toggle -->
-  <button class=\"filter-toggle\" id=\"filterToggle\" aria-controls=\"filterPanel\" aria-expanded=\"false\">
+  <!-- Filter toggle -->
+  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="false">
     <span>Filtrering</span>
-    <span id=\"filterToggleIcon\">＋</span>
+    <span id="filterToggleIcon">＋</span>
   </button>
 
-  <!-- Filter panel -->
-  <div class=\"filter-panel is-collapsed\" id=\"filterPanel\">
-    <div class=\"filter-title\">Filtrer efter art</div>
+  <!-- Filter panel (starts collapsed) -->
+  <div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
+    <div class="filter-title">Filtrer efter art</div>
 
-    <div class=\"filter-group\">
-      <label class=\"filter-label\">Vælg art(er)</label>
-      <div id=\"speciesSelect\" class=\"species-list\"></div>
+    <div class="filter-group">
+      <label class="filter-label" for="speciesSelect">Vælg art(er)</label>
+    <div id="speciesSelect" class="species-list"></div>
     </div>
 
-    <div class=\"filter-group\">
-      <label class=\"filter-label\">Registreringsstatus</label>
-      <select id=\"presenceSelect\" class=\"filter-select\">
-        <option value=\"absent\">Ikke registreret</option>
-        <option value=\"one\">Registreret i én prøve</option>
-        <option value=\"both\" selected>Registreret i begge prøver</option>
+    <div class="filter-group">
+      <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
+      <select id="presenceSelect" class="filter-select">
+        <option value="absent">Ikke registreret</option>
+        <option value="one">Registreret i én prøve</option>
+        <option value="both">Registreret i begge prøver</option>
       </select>
     </div>
 
-    <div class=\"filter-group\">
-      <input type=\"checkbox\" id=\"matchAll\" />
-      <label for=\"matchAll\">Match alle valgte arter</label>
+    <div class="filter-group filter-row">
+      <input type="checkbox" id="matchAll" />
+      <label for="matchAll" style="font-size: 12px; color: #333;">Match alle valgte arter</label>
     </div>
 
-    <div class=\"filter-group\">
-      <label class=\"filter-label\">Prøvetagningsdato</label>
-      <div class=\"filter-row\">
-        <input type=\"date\" id=\"dateFrom\" class=\"filter-select\" />
-        <span style=\"font-size:12px;\">til</span>
-        <input type=\"date\" id=\"dateTo\" class=\"filter-select\" />
+    <!-- Date filter -->
+    <div class="filter-group">
+      <label class="filter-label">Prøvetagningsdato</label>
+      <div class="filter-row">
+        <input type="date" id="dateFrom" class="filter-select" />
+        <span style="font-size:12px;">til</span>
+        <input type="date" id="dateTo" class="filter-select" />
       </div>
     </div>
 
-    <button class=\"btn btn-primary\" id=\"applyFilterBtn\">Anvend filter</button>
-    <button class=\"btn\" id=\"resetFilterBtn\">Nulstil</button>
-
-    <div id=\"filterBadge\" class=\"filter-badge\"></div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" id="applyFilterBtn">Anvend filter</button>
+      <button class="btn" id="resetFilterBtn">Nulstil</button>
+      <div id="filterBadge" class="filter-badge"></div>
+    </div>
   </div>
 
   <!-- Info panel -->
-  <div class=\"info-panel\">
-    <button class=\"info-toggle\" onclick=\"toggleInfo()\" aria-expanded=\"true\">
+  <div class="info-panel">
+    <button class="info-toggle" onclick="toggleInfo()">
       <span>Om projektet</span>
-      <span id=\"toggle-icon\">−</span>
+      <span id="toggle-icon">−</span>
     </button>
-    <div class=\"info-content open\" id=\"info-content\">
+    <div class="info-content open" id="info-content">
       <h2>eDNA i nicheområder</h2>
-      <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt.</p>
+      <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt "eDNA i nicheområder – et redskab til at finde oversete invasive og rødlistede arter".</p>
+      <p>Projektet udføres i samarbejde mellem Erhvervsakademi København, Statens Naturhistoriske Museum og Miljøstyrelsen.</p>
+
+      <h3>Deltagelse</h3>
+      <p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på:</p>
+
+      <h3>Prøvetagning</h3>
+      <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
+
+      <address>
+        <a class="contact-link" target="_blank" rel="noopener"
+           href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d">
+          Peder Oxes Allé 2, 3400 Hillerød
+        </a>
+      </address>
+
+      <p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+      <h3>Gymnasieundervisning</h3>
+      <p>Det er muligt at tilmelde 10–12 gymnasieelever til en undervisningsdag hos os. Her kan eleverne medbringe egne prøver og deltage i analysen af dem.</p>
+
+      <h3>Studerende på EK Laboratorie og miljø</h3>
+      <p>Projektet indgår desuden som et frivilligt tilbud til studerende på laborant- og miljøteknologuddannelsen på Erhvervsakademi København.</p>
+
+      <h3>Kontaktinformation</h3>
+      <p>Navn: Søren Thromsholdt Christensen</p>
+
+      <p>
+        E‑mail:
+        <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a>
+      </p>
     </div>
   </div>
 
   <!-- Legend -->
-  <div class=\"legend\">
-    <div class=\"legend-title\">Artsregistrering</div>
-    <div class=\"legend-item\"><div class=\"legend-color\" style=\"background: #28a745; width:16px; height:16px; border-radius:10px; margin-right:8px; display:inline-block;\"></div>Registreret i begge prøver</div>
-    <div class=\"legend-item\"><div class=\"legend-color\" style=\"background: #d4edda; width:16px; height:16px; border-radius:10px; margin-right:8px; display:inline-block;\"></div>Registreret i én prøve</div>
-    <div class=\"legend-item\"><div class=\"legend-color\" style=\"background: #f8d7da; width:16px; height:16px; border-radius:10px; margin-right:8px; display:inline-block;\"></div>Ikke registreret</div>
-    <div class=\"legend-item\"><div class=\"legend-color\" style=\"background: #e9ecef; width:16px; height:16px; border-radius:10px; margin-right:8px; display:inline-block;\"></div>Ikke analyseret</div>
+  <div class="legend">
+    <div class="legend-title">Artsregistrering</div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #28a745;"></div>
+      <span>Registreret i begge prøver</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #d4edda;"></div>
+      <span>Registreret i én prøve</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #f8d7da;"></div>
+      <span>Ikke registreret</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #e9ecef;"></div>
+      <span>Ikke analyseret</span>
+    </div>
   </div>
 
-  <button class=\"download-btn\" onclick=\"downloadData()\">📥 Hent data</button>
+  <button class="download-btn" onclick="downloadData()">📥 Hent data</button>
 
-  <div class=\"loading\" id=\"loading\">Indlæser data...</div>
+  <div class="loading" id="loading">Indlæser data...</div>
 
-  <!-- Leaflet JS -->
-  <script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\" integrity=\"sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=\" crossorigin=\"\"></script>
-  <script src=\"https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js\"></script>
-  <script src=\"https://unpkg.com/papaparse@5.4.1/papaparse.min.js\"></script>
+  <!-- JS libs -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-  // --- Config ---
-  const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
+    // --- Config ---
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
 
-  const SPECIES_COLUMNS = [
-    'Aborre', 'Trepigget hundestejle', 'Europæisk ål', 'Stor vandsalamander',
-    'Solaborre', 'Vandremusling', 'Lille vandsalamander', 'Prymnesium parvum',
-    'Flodkrebs', 'Signalkrebs', 'Galizisk sumpkrebs', 'Rødøret terrapin',
-    'Grønbroget tudse', 'Strandtudse', 'Europæisk malle', 'Karpe'
-  ];
+    const SPECIES_COLUMNS = [
+      'Aborre', 'Trepigget hundestejle', 'Europæisk ål', 'Stor vandsalamander',
+      'Solaborre', 'Vandremusling', 'Lille vandsalamander', 'Prymnesium parvum',
+      'Flodkrebs', 'Signalkrebs', 'Galizisk sumpkrebs', 'Rødøret terrapin',
+      'Grønbroget tudse', 'Strandtudse', 'Europæisk malle', 'Karpe'
+    ];
 
-  // --- Map init ---
-  const map = L.map('map').setView([55.9, 11.5], 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    // --- Map init ---
+    const map = L.map('map').setView([55.9, 11.5], 7);
 
-  // Cluster layer
-  const markers = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true });
-  map.addLayer(markers);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-  // --- UI toggles ---
-  function toggleFilterPanel() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('filterToggle');
-    const icon = document.getElementById('filterToggleIcon');
-    const collapsed = panel.classList.toggle('is-collapsed');
-    btn.setAttribute('aria-expanded', (!collapsed).toString());
-    icon.textContent = collapsed ? '＋' : '−';
-  }
-  function toggleInfo() {
-    const content = document.getElementById('info-content');
-    const icon = document.getElementById('toggle-icon');
-    const nowOpen = !content.classList.contains('open');
-    content.classList.toggle('open');
-    icon.textContent = nowOpen ? '−' : '+';
-    document.querySelector('.info-toggle').setAttribute('aria-expanded', nowOpen.toString());
-  }
+    // --- UI toggles (auto-collapse on mobile) ---
+    function toggleFilterPanel() {
+      const panel = document.getElementById('filterPanel');
+      const btn = document.getElementById('filterToggle');
+      const icon = document.getElementById('filterToggleIcon');
 
-  // --- Download (kun filtrerede data) ---
-  function downloadData() {
-    const filtered = markers.getLayers().map(m => m.featureData);
-    if (filtered.length === 0) return alert('Ingen filtrerede data at downloade.');
-    const csv = Papa.unparse(filtered);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'edna-filtered.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+      const isOpening = panel.classList.contains('is-collapsed');
 
-  // --- Helpers ---
-  function parseNumber(value) { if (value === '' || value == null) return NaN; return parseFloat(String(value).replace(',', '.')); }
-  function getSpeciesClass(value) { if (value === '' || value == null) return 'species-empty'; const n = parseInt(value, 10); if (n === 2) return 'species-2'; if (n === 1) return 'species-1'; if (n === 0) return 'species-0'; return 'species-empty'; }
-  function parseShortDanishDate(str) {
-    if (!str) return null; const s = String(str).trim();
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
-    const m = s.match(/^(\\d{1,2})-\\/.-\\/.$/);
-    if (m) { let day = parseInt(m[1],10), month = parseInt(m[2],10)-1, year = parseInt(m[3],10); if (year<100) year += 2000; const d = new Date(year, month, day); return isNaN(d) ? null : d; }
-    return null;
-  }
-  function parseDateFromInput(value) { if (!value) return null; const d = new Date(value + 'T00:00:00'); return isNaN(d) ? null : d; }
-  function dateMatches(rowDateStr, fromStr, toStr) {
-    const hasRange = !!fromStr || !!toStr; if (!hasRange) return true;
-    const rowDate = parseShortDanishDate(rowDateStr); if (!rowDate) return false;
-    const from = parseDateFromInput(fromStr); const to = parseDateFromInput(toStr);
-    if (from && rowDate < from) return false;
-    if (to) { const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1); if (rowDate >= toInclusive) return false; }
-    return true;
-  }
+      // If opening on mobile, close the "Om projektet" panel
+      if (isOpening && window.innerWidth <= 600) {
+        const infoContent = document.getElementById('info-content');
+        const infoIcon = document.getElementById('toggle-icon');
+        infoContent.classList.remove('open');
+        infoIcon.textContent = '+';
+      }
 
-  function createPopupContent(row) {
-    const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
-    const provenr = row['Prøvenr.'] || ''; const dato = row['Indsamlingsdato'] || ''; const vandmiljo = row['Vandmiljø'] || '';
-    let html = `<div class=\"popup-header\">${lokalitet}</div>`;
-    html += `<div class=\"popup-section\">`;
-    html += `<div class=\"popup-section-title\">Prøveinfo</div>`;
-    if (provenr) html += `<div class=\"popup-row\"><span class=\"popup-label\">Prøvenr.</span><span class=\"popup-value\">${provenr}</span></div>`;
-    if (dato) html += `<div class=\"popup-row\"><span class=\"popup-label\">Dato</span><span class=\"popup-value\">${dato}</span></div>`;
-    if (vandmiljo) html += `<div class=\"popup-row\"><span class=\"popup-label\">Vandmiljø</span><span class=\"popup-value\">${vandmiljo}</span></div>`;
-    html += `</div>`;
-    html += `<div class=\"popup-section\"><div class=\"popup-section-title\">Arter</div><div class=\"species-grid\">`;
-    SPECIES_COLUMNS.forEach(sp => { const value = row[sp]; const cssClass = getSpeciesClass(value); const label = (value === '' || value == null) ? sp : `${sp} (${value})`; const title = (value === '2') ? 'Registreret i begge prøver' : (value === '1') ? 'Registreret i én prøve' : (value === '0') ? 'Ikke registreret' : 'Ikke analyseret'; html += `<span class=\"species-badge ${cssClass}\" title=\"${title}\">${label}</span>`; });
-    html += `</div></div>`; return html;
-  }
+      const collapsed = panel.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', (!collapsed).toString());
+      icon.textContent = collapsed ? '＋' : '−';
+    }
 
-  // --- Filter state ---
-  let allMarkers = []; let allLatLngs = [];
-  function valueMatchesMode(cellValue, mode) {
-    const v = (cellValue == null) ? '' : String(cellValue).trim(); if (v === '') return false; const n = parseInt(v,10); if (Number.isNaN(n)) return false; if (mode==='both') return n===2; if (mode==='one') return n===1; if (mode==='absent') return n===0; return false;
-  }
-  function getSelectedSpecies(){ return Array.from(document.querySelectorAll('#speciesSelect input:checked')).map(cb=>cb.value); }
-  function getPresenceMode(){ return document.getElementById('presenceSelect').value; }
-  function getMatchAll(){ return document.getElementById('matchAll').checked; }
+    function toggleInfo() {
+      const content = document.getElementById('info-content');
+      const icon = document.getElementById('toggle-icon');
 
-  function updateBadge(count){
-    const badge = document.getElementById('filterBadge'); const selectedSpecies = getSelectedSpecies(); const mode=getPresenceMode(); const matchAll=getMatchAll(); const dateFrom=document.getElementById('dateFrom').value; const dateTo=document.getElementById('dateTo').value; const hasSpecies=selectedSpecies.length>0; const hasDate=!!dateFrom||!!dateTo; if(!hasSpecies && !hasDate){ badge.style.display='none'; return; }
-    const speciesLabel = hasSpecies ? `${selectedSpecies.length} art${selectedSpecies.length>1?'er':''}` : null;
-    const modeLabel = hasSpecies ? (mode==='both'?'begge prøver': mode==='one'?'én prøve':'ingen registrering') : null;
-    const matchLabel = hasSpecies && selectedSpecies.length>1 ? (matchAll?'match alle':'match mindst én') : null;
-    const dateLabel = hasDate ? `dato: ${dateFrom||'?'} → ${dateTo||'?'}` : null;
-    badge.textContent = [ `${count} resultater`, speciesLabel, modeLabel?`status: ${modeLabel}`:null, matchLabel, dateLabel ].filter(Boolean).join(' • ');
-    badge.style.display='inline-block';
-  }
+      const isOpening = !content.classList.contains('open');
 
-  function applyFilter({fit=false}={}){
-    const selectedSpecies=getSelectedSpecies(); const mode=getPresenceMode(); const matchAll=getMatchAll(); const dateFrom=document.getElementById('dateFrom').value; const dateTo=document.getElementById('dateTo').value; const hasSpecies=selectedSpecies.length>0;
-    markers.clearLayers(); const kept=[];
-    for(const m of allMarkers){ const row=m.featureData; if(!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue; if(hasSpecies){ const results=selectedSpecies.map(sp=>valueMatchesMode(row[sp], mode)); const ok=matchAll?results.every(Boolean):results.some(Boolean); if(!ok) continue; } kept.push(m); }
-    if(kept.length>0) markers.addLayers(kept);
-    updateBadge(kept.length);
-    if(fit && kept.length>0){ const b=kept.map(m=>m.getLatLng()); map.fitBounds(L.latLngBounds(b), { padding:[50,50] }); }
-  }
+      // If opening on mobile, close the filter panel
+      if (isOpening && window.innerWidth <= 600) {
+        const filterPanel = document.getElementById('filterPanel');
+        const filterIcon = document.getElementById('filterToggleIcon');
+        filterPanel.classList.add('is-collapsed');
+        filterIcon.textContent = '＋';
+      }
 
-  function resetFilter(){
-    document.querySelectorAll('#speciesSelect input[type=\"checkbox\"]').forEach(cb=>cb.checked=false);
-    document.getElementById('presenceSelect').value='both';
-    document.getElementById('matchAll').checked=false;
-    document.getElementById('dateFrom').value='';
-    document.getElementById('dateTo').value='';
-    markers.clearLayers(); if(allMarkers.length) markers.addLayers(allMarkers);
-    document.getElementById('filterBadge').style.display='none';
-    if(allLatLngs.length) map.fitBounds(L.latLngBounds(allLatLngs), { padding:[50,50] });
-  }
+      content.classList.toggle('open');
+      icon.textContent = content.classList.contains('open') ? '−' : '+';
+    }
 
-  function initFilterUI(){
-    const list=document.getElementById('speciesSelect'); list.innerHTML='';
-    SPECIES_COLUMNS.forEach(sp=>{ const div=document.createElement('div'); div.className='species-item'; const cb=document.createElement('input'); cb.type='checkbox'; cb.value=sp; cb.id=`species_${sp.replace(/\\s+/g,'_')}`; cb.addEventListener('change',()=>applyFilter()); const label=document.createElement('label'); label.setAttribute('for', cb.id); label.textContent=sp; div.appendChild(cb); div.appendChild(label); list.appendChild(div); });
-    document.getElementById('applyFilterBtn').addEventListener('click',()=>applyFilter({fit:true}));
-    document.getElementById('resetFilterBtn').addEventListener('click',resetFilter);
-    document.getElementById('presenceSelect').addEventListener('change',()=>applyFilter());
-    document.getElementById('matchAll').addEventListener('change',()=>applyFilter());
-    document.getElementById('dateFrom').addEventListener('change',()=>applyFilter());
-    document.getElementById('dateTo').addEventListener('change',()=>applyFilter());
-    document.getElementById('filterToggle').addEventListener('click',toggleFilterPanel);
-  }
+    // --- Download only filtered data ---
+    function downloadData() {
+      // Take whatever is currently present in the marker cluster (i.e., already filtered)
+      const filtered = markers.getLayers().map(m => m.featureData);
 
-  // --- Legend safe area ---
-  function setLegendSafeArea(){ const legend=document.querySelector('.legend'); if(!legend) return; const distance=10, cushion=8; const h=legend.offsetHeight+distance+cushion; document.documentElement.style.setProperty('--legend-bottom-safe', h+'px'); }
-  window.addEventListener('load', setLegendSafeArea);
-  window.addEventListener('resize', setLegendSafeArea);
-  window.addEventListener('orientationchange', setLegendSafeArea);
-  setTimeout(setLegendSafeArea, 500);
-  setTimeout(setLegendSafeArea, 1500);
+      if (filtered.length === 0) {
+        alert("Ingen filtrerede data at downloade.");
+        return;
+      }
 
-  // --- Data load ---
-  Papa.parse(CSV_URL, {
-    download: true, header: true, skipEmptyLines: true,
-    complete: function(results){
-      const loading=document.getElementById('loading'); if(loading) loading.style.display='none';
-      const latlngs=[];
-      results.data.forEach(row=>{ const lat=parseNumber(row['Y-koordinat']); const lng=parseNumber(row['X-koordinat']); if(!isNaN(lat) && !isNaN(lng)){ const marker=L.marker([lat,lng]); marker.bindPopup(createPopupContent(row), {maxWidth:350, maxHeight:400}); marker.featureData=row; allMarkers.push(marker); latlngs.push([lat,lng]); } });
-      if(allMarkers.length) markers.addLayers(allMarkers);
-      allLatLngs=latlngs; if(latlngs.length) map.fitBounds(L.latLngBounds(latlngs), { padding:[50,50] });
-      initFilterUI(); updateBadge(allMarkers.length);
-    },
-    error: function(err){ const loading=document.getElementById('loading'); if(loading) loading.textContent='Fejl ved indlæsning af data'; console.error('
+      const csv = Papa.unparse(filtered);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement('a');
+
+      link.href = URL.createObjectURL(blob);
+      link.download = "edna-filtered.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // --- Helpers ---
+    function parseNumber(value) {
+      if (value === '' || value === null || value === undefined) return NaN;
+      return parseFloat(String(value).replace(',', '.'));
+    }
+
+    function getSpeciesClass(value) {
+      if (value === '' || value === null || value === undefined) return 'species-empty';
+      const num = parseInt(value, 10);
+      if (num === 2) return 'species-2';
+      if (num === 1) return 'species-1';
+      if (num === 0) return 'species-0';
+      return 'species-empty';
+    }
+
+    function formatValue(value) {
+      if (value === '' || value === null || value === undefined) return '—';
+      return value;
+    }
+
+    function parseShortDanishDate(str) {
+      if (!str) return null;
+      const s = String(str).trim();
+
+      // ISO format yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const d = new Date(s + "T00:00:00");
+        return isNaN(d) ? null : d;
+      }
+
+      // Danish formats with 2- or 4-digit year
+      const match = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2}|\d{4})$/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        let year = parseInt(match[3], 10);
+
+        // Convert 2-digit year
+        if (year < 100) {
+          year += 2000; // assumption: project years are 2020–2035
+        }
+
+        const d = new Date(year, month, day);
+        return isNaN(d) ? null : d;
+      }
+
+      return null;
+    }
+
+    function parseDateFromInput(value) {
+      if (!value) return null;
+      const d = new Date(value + "T00:00:00");
+      return isNaN(d) ? null : d;
+    }
+
+    function dateMatches(rowDateStr, fromStr, toStr) {
+      const hasRange = !!fromStr || !!toStr;
+      if (!hasRange) return true;
+
+      const rowDate = parseShortDanishDate(rowDateStr);
+      if (!rowDate) return false;
+
+      const from = parseDateFromInput(fromStr);
+      const to = parseDateFromInput(toStr);
+
+      if (from && rowDate < from) return false;
+
+      if (to) {
+        // inclusive "to" end of day
+        const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+        if (rowDate >= toInclusive) return false;
+      }
+
+      return true;
+    }
+
+    function createPopupContent(row) {
+      const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
+      const provenr = row['Prøvenr.'] || '';
+      const dato = row['Indsamlingsdato'] || '';
+      const vandmiljo = row['Vandmiljø'] || '';
+      const filtreringsvolumen = row['Filtreringsvolumen'] || '';
+      const vandtemp = row['Vandtemperatur'] || '';
+      const ph = row['pH-værdi'] || '';
+      const salinitet = row['Salinitet'] || '';
+      const dybde = row['Vanddybde ved indsamlingssted'] || '';
+      const indsamlingsdybde = row['Indsamlingsdybde'] || '';
+      const bundforhold = row['Bundforhold/sediment'] || '';
+      const observationer = row['Evt. observerede organismer'] || '';
+      const bemaerkninger = row['Evt. bemærkninger'] || '';
+
+      let html = `<div class="popup-header">${lokalitet}</div>`;
+
+      // Prøveinfo
+      html += `<div class="popup-section">`;
+      html += `<div class="popup-section-title">Prøveinfo</div>`;
+      if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
+      if (dato) html += `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>`;
+      if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
+      html += `</div>`;
+
+      // Vandparametre
+      const hasWaterParams = filtreringsvolumen || vandtemp || ph || salinitet || dybde || indsamlingsdybde || bundforhold;
+      if (hasWaterParams) {
+        html += `<div class="popup-section">`;
+        html += `<div class="popup-section-title">Vandparametre</div>`;
+        if (filtreringsvolumen) html += `<div class="popup-row"><span class="popup-label">Filtreringsvolumen</span><span class="popup-value">${filtreringsvolumen} ml</span></div>`;
+        if (vandtemp) html += `<div class="popup-row"><span class="popup-label">Temperatur</span><span class="popup-value">${vandtemp}°C</span></div>`;
+        if (ph) html += `<div class="popup-row"><span class="popup-label">pH</span><span class="popup-value">${ph}</span></div>`;
+        if (salinitet) html += `<div class="popup-row"><span class="popup-label">Salinitet</span><span class="popup-value">${salinitet}‰</span></div>`;
+        if (dybde) html += `<div class="popup-row"><span class="popup-label">Vanddybde</span><span class="popup-value">${dybde} cm</span></div>`;
+        if (indsamlingsdybde) html += `<div class="popup-row"><span class="popup-label">Indsamlingsdybde</span><span class="popup-value">${indsamlingsdybde} cm</span></div>`;
+        if (bundforhold) html += `<div class="popup-row"><span class="popup-label">Bundforhold</span><span class="popup-value">${bundforhold}</span></div>`;
+        html += `</div>`;
+      }
+
+      // Observationer
+      if (observationer || bemaerkninger) {
+        html += `<div class="popup-section">`;
+        html += `<div class="popup-section-title">Observationer</div>`;
+        if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer}</span></div>`;
+        if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger}</span></div>`;
+        html += `</div>`;
+      }
+
+      // Arter
+      html += `<div class="popup-section">`;
+      html += `<div class="popup-section-title">Arter</div>`;
+      html += `<div class="species-grid">`;
+      for (const species of SPECIES_COLUMNS) {
+        const value = row[species];
+        const cssClass = getSpeciesClass(value);
+        html += `<span class="species-badge ${cssClass}">${species}</span>`;
+      }
+      html += `</div></div>`;
+
+      return html;
+    }
+
+    // --- Filter state ---
+    let allMarkers = [];
+    let allBounds = [];
+    const markers = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true
+    });
+
+    function valueMatchesMode(cellValue, mode) {
+      // mode: 'absent' | 'one' | 'both'
+      const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
+      if (v === '') {
+        // Consider empty as "not analyzed" -> never matches the 3 explicit modes
+        return false;
+      }
+      const n = parseInt(v, 10);
+      if (Number.isNaN(n)) return false;
+
+      switch (mode) {
+        case 'both': return n === 2;
+        case 'one':  return n === 1;
+        case 'absent': return n === 0;
+        default: return false;
+      }
+    }
+
+   
+function getSelectedSpecies() {
+  return Array.from(document.querySelectorAll('.species-list input:checked'))
+    .map(cb => cb.value);
+}
+
+    function getPresenceMode() {
+      return document.getElementById('presenceSelect').value;
+    }
+    function getMatchAll() {
+      return document.getElementById('matchAll').checked;
+    }
+
+    function updateBadge(count) {
+      const badge = document.getElementById("filterBadge");
+      if (count === allMarkers.length || count === 0) {
+        // Show badge if a filter is active but resulted in 0
+        const anySpecies = getSelectedSpecies().length > 0;
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const hasDate = !!dateFrom || !!dateTo;
+
+        if (anySpecies || hasDate) {
+          badge.style.display = "inline-block";
+          badge.textContent = `${count} resultater`;
+        } else {
+          badge.style.display = "none";
+        }
+      } else {
+        badge.style.display = "inline-block";
+        badge.textContent = `${count} resultater`;
+      }
+    }
+
+    function applyFilter({ fit = false } = {}) {
+      const selectedSpecies = getSelectedSpecies();
+      const mode = getPresenceMode(); // 'absent' | 'one' | 'both'
+      const matchAll = getMatchAll();
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+
+      const showAllSpecies = (selectedSpecies.length === 0);
+
+      markers.clearLayers();
+      const kept = [];
+
+      for (const m of allMarkers) {
+        const row = m.featureData;
+
+        // date filter
+        if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
+
+        // species filter
+        if (!showAllSpecies) {
+          const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
+          const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
+          if (!ok) continue;
+        }
+
+        kept.push(m);
+      }
+
+      if (kept.length > 0) {
+        markers.addLayers(kept);
+      }
+
+      updateBadge(kept.length);
+
+      if (fit && kept.length > 0) {
+        const b = kept.map(m => m.getLatLng());
+        map.fitBounds(L.latLngBounds(b), { padding: [50, 50] });
+      }
+    }
+
+    function resetFilter() {
+      // Nulstil UI
+      document.getElementById('speciesSelect').selectedIndex = -1; // fjern valg
+      document.getElementById('presenceSelect').value = 'absent';
+      document.getElementById('matchAll').checked = false;
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+
+      // Vis alle markører
+      markers.clearLayers();
+      markers.addLayers(allMarkers);
+
+      // Badge off
+      updateBadge(allMarkers.length);
+
+      // Fit til alle
+      if (allBounds.length > 0) {
+        map.fitBounds(allBounds, { padding: [50, 50] });
+      }
+    }
+
+    function initFilterUI() {
+      // udfyld arts-listen fra SPECIES_COLUMNS
+     const list = document.getElementById('speciesSelect');
+SPECIES_COLUMNS.forEach(sp => {
+  const div = document.createElement('div');
+  div.className = 'species-item';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = sp;
+  cb.addEventListener('change', () => applyFilter());
+
+  const label = document.createElement('label');
+  label.textContent = sp;
+
+  div.appendChild(cb);
+  div.appendChild(label);
+  list.appendChild(div);
+});
+
+
+      document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
+      document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
+
+      // Live-opdatering ved ændringer (uden auto-fit)
+      document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
+      document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
+      document.getElementById('matchAll').addEventListener('change', () => applyFilter());
+      document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
+      document.getElementById('dateTo').addEventListener('change', () => applyFilter());
+
+      // Turn the species multiselect into a toggleable list
+      document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
+        e.preventDefault(); // prevent default browser behavior
+
+        const option = e.target;
+        if (option.tagName === 'OPTION') {
+          option.selected = !option.selected; // toggle selection
+          option.dispatchEvent(new Event('change')); // trigger filter update
+        }
+      });
+
+      // Toggle button
+      document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
+    }
+
+    map.addLayer(markers);
+
+    // --- Keep panels 10px above legend: measure legend and set CSS var ---
+    function setLegendSafeArea() {
+      const legend = document.querySelector('.legend');
+      if (!legend) return;
+
+      // Legend height + 10px distance + small cushion
+      const distance = 10;
+      const cushion = 8;
+      const h = legend.offsetHeight + distance + cushion;
+
+      document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+    }
+    window.addEventListener('load', setLegendSafeArea);
+    window.addEventListener('resize', setLegendSafeArea);
+    window.addEventListener('orientationchange', setLegendSafeArea);
+    // re-measure after late loads (fonts/map tiles)
+    setTimeout(setLegendSafeArea, 500);
+    setTimeout(setLegendSafeArea, 1500);
+
+    // --- Load and display data ---
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        document.getElementById('loading').style.display = 'none';
+
+        const bounds = [];
+
+        results.data.forEach(row => {
+          const lat = parseNumber(row['Y-koordinat']);
+          const lng = parseNumber(row['X-koordinat']);
+
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const marker = L.marker([lat, lng]);
+            marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
+            marker.featureData = row; // gem data på markøren til filtrering
+
+            allMarkers.push(marker);
+            bounds.push([lat, lng]);
+          }
+        });
+
+        // Tilføj alle markører første gang
+        markers.addLayers(allMarkers);
+
+        // Gem total-bounds til reset
+        allBounds = bounds;
+
+        // Fit map to show all markers
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        // init filter-UI når data er klar
+        initFilterUI();
+
+        // Init badge to hidden / full count
+        updateBadge(allMarkers.length);
+      },
+      error: function(error) {
+        document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
+        console.error('CSV parsing error:', error);
+      }
+    });
+  </script>
+</body>
+</html>
