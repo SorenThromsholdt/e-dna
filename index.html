@@ -469,6 +469,50 @@
 ``
 
 
+/* === Keep dropdowns 10px above the legend and scroll inside === */
+
+/* Defaults you can tweak if you want */
+:root {
+  --ui-top-safe: 10px;          /* distance from top edge to your panels */
+  --toggle-row-height: 46px;    /* your filter panel uses .with-toggle-offset { margin-top: 46px } */
+  --legend-bottom-safe: 150px;  /* approximate legend height + the 10px distance you want */
+}
+
+/* The "Om projektet" body */
+.info-content {
+  /* total available height: viewport - top - legend/safe area */
+  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  overflow-y: auto;
+}
+
+/* The "Filtrering" dropdown body */
+.filter-panel {
+  /* When opened, it sits below its toggle (46px extra) */
+  max-height: calc(100vh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
+  overflow-y: auto;
+}
+
+/* Make sure the legend stays clickable if things are tight */
+.legend {
+  z-index: 1200;
+}
+
+/* Mobile tuning (less vertical room) */
+@media (max-width: 600px) {
+  :root {
+    /* slightly larger reserve on small screens; the JS below will refine it */
+    --legend-bottom-safe: 170px;
+  }
+
+  .info-content {
+    max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  }
+
+  .filter-panel {
+    max-height: calc(100vh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
+  }
+}
+
 
     
   </style>
@@ -1041,6 +1085,29 @@ window.addEventListener('orientationchange', setLegendSafeArea);
         document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
         console.error('CSV parsing error:', error);
       }
+
+      
+// Dynamically reserve space for the legend so panels end 10px above it
+function setLegendSafeArea() {
+  const legend = document.querySelector('.legend');
+  if (!legend) return;
+
+  // Legend height + 10px distance (your requirement) + a small cushion
+  const distanceAboveLegend = 10;
+  const cushion = 8; // optional breathing room
+  const h = legend.offsetHeight + distanceAboveLegend + cushion;
+
+  // Apply to the CSS variable
+  document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+}
+
+// Run on load and on resize/orientation changes
+window.addEventListener('load', setLegendSafeArea);
+window.addEventListener('resize', setLegendSafeArea);
+window.addEventListener('orientationchange', setLegendSafeArea);
+
+
+      
     });
   </script>
 </body>
