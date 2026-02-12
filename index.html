@@ -284,6 +284,27 @@
       .legend { left: 10px; right: 10px; }
       .download-btn { right: 10px; }
     }
+
+
+/* Prevent the entire page from scrolling on mobile */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none; /* key fix for Android Chrome */
+}
+
+/* Map container must not allow page scroll */
+#map {
+  height: 100dvh;         /* mobile-safe full height */
+  overflow: hidden;       /* prevents scroll tunneling */
+  touch-action: none;     /* prevents accidental “page move” */
+  position: fixed;        /* ensures it pins the viewport */
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+    
   </style>
 </head>
 <body>
