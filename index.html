@@ -1026,6 +1026,25 @@ document.getElementById('speciesSelect').addEventListener('mousedown', function 
 
     map.addLayer(markers);
 
+// Dynamically reserve space for the legend so panels end 10px above it
+function setLegendSafeArea() {
+  const legend = document.querySelector('.legend');
+  if (!legend) return;
+
+  // Legend height + 10px distance (your requirement) + a small cushion
+  const distanceAboveLegend = 10;
+  const cushion = 8; // optional breathing room
+  const h = legend.offsetHeight + distanceAboveLegend + cushion;
+
+  // Apply to the CSS variable
+  document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+}
+
+// Run on load and on resize/orientation changes
+window.addEventListener('load', setLegendSafeArea);
+window.addEventListener('resize', setLegendSafeArea);
+window.addEventListener('orientationchange', setLegendSafeArea);
+    
     // Load and display data
     Papa.parse(CSV_URL, {
       download: true,
