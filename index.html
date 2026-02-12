@@ -317,6 +317,8 @@
   }
 }
 
+    /* Final override: we place the filter-panel using JS (absolute pixels), so kill the old margin offset */
+.filter-panel.with-toggle-offset { margin-top: 0 !important; }
     
   </style>
 </head>
@@ -764,6 +766,67 @@
     // --- Load and display data ---
     const loading = document.getElementById('loading');
 
+
+// ---- Panels: always stop 10px above legend and scroll internally ----
+(function () {
+  let rafId = null;
+
+  function updatePanelHeights() {
+    const legend       = document.querySelector('.legend');
+    const infoToggle   = document.querySelector('.info-toggle');
+    const infoContent  = document.getElementById('info-content');
+    const filterToggle = document.getElementById('filterToggle');
+    const filterPanel  = document.getElementById('filterPanel');
+
+    if (!legend || !infoToggle || !infoContent || !filterToggle || !filterPanel) return;
+
+    // 1) Pin filter panel under its toggle (absolute px from viewport top)
+    const filterTopPx = Math.round(filterToggle.getBoundingClientRect().bottom + 10);
+    filterPanel.style.top = filterTopPx + 'px';
+    filterPanel.style.marginTop = '0px'; // neutralize CSS class offset
+
+    // 2) Compute available vertical space = legendTop - 10px - panelTop
+    const legendTop = Math.round(legend.getBoundingClientRect().top);
+
+    // Info panel content height (toggle + 10px gap)
+    const infoTopPx = Math.round(infoToggle.getBoundingClientRect().bottom + 10);
+    const infoMax   = Math.max(120, legendTop - 10 - infoTopPx);
+
+    // Filter panel height
+    const filterMax = Math.max(120, legendTop - 10 - filterTopPx);
+
+    // 3) Apply as inline max-heights (inline beats any CSS conflicts)
+    infoContent.style.maxHeight  = infoMax + 'px';
+    filterPanel.style.maxHeight  = filterMax + 'px';
+
+    // Ensure scrollable
+    infoContent.style.overflowY  = 'auto';
+    filterPanel.style.overflowY  = 'auto';
+    infoContent.style.webkitOverflowScrolling = 'touch';
+    filterPanel.style.webkitOverflowScrolling = 'touch';
+  }
+
+  // Small rAF scheduler to avoid layout thrash on resize/orientation/map fits
+  function scheduleUpdatePanelHeights() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(updatePanelHeights);
+  }
+
+  // Expose a global so we can call it from toggles and after data load
+  window.__updatePanelHeights = scheduleUpdatePanelHeights;
+
+  // Recalculate on viewport changes
+  window.addEventListener('load',               scheduleUpdatePanelHeights);
+  window.addEventListener('resize',             scheduleUpdatePanelHeights);
+  window.addEventListener('orientationchange',  scheduleUpdatePanelHeights);
+
+  // Re-run a bit after load to catch late font/map tile shifts
+  setTimeout(scheduleUpdatePanelHeights, 300);
+  setTimeout(scheduleUpdatePanelHeights, 1000);
+})();
+
+
+    
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
