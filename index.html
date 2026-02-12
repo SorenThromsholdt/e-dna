@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="da">
 <head>
@@ -23,17 +22,39 @@
   />
 
   <style>
+    /* ========== Base / Layout ========== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
-    #map { width: 100vw; height: 100vh; }
 
+    html, body {
+      height: 100%;
+      overflow: hidden; /* prevent page scrolling; panels/map handle their own scrolling */
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      color: #111;
+    }
+
+    /* Use dynamic viewport height so mobile browser UI doesn’t break layout */
+    #map { width: 100vw; height: 100dvh; }
+
+    /* ========== Variables (JS updates --legend-bottom-safe) ========== */
+    :root{
+      --ui-top-safe: 10px;          /* distance from top edge to panels */
+      --toggle-row-height: 46px;    /* filter panel drops below its toggle (.with-toggle-offset) */
+      --info-toggle-row: 44px;      /* approx. height of the info toggle (button) */
+      --legend-bottom-safe: 170px;  /* fallback; will be measured precisely by JS */
+    }
+
+    /* ========== Info panel (top-right) ========== */
     .info-panel {
       position: absolute;
-      top: 10px;
+      top: var(--ui-top-safe);
       right: 10px;
       z-index: 1000;
-      max-width: 350px;
+      max-width: min(350px, 80vw);
     }
+
     .info-toggle {
       background: white;
       border: none;
@@ -47,19 +68,30 @@
       align-items: center;
       gap: 8px;
       margin-left: auto;
+      width: 100%;
+      justify-content: space-between;
     }
     .info-toggle:hover { background: #f5f5f5; }
+
     .info-content {
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
       padding: 20px;
       margin-top: 10px;
-      display: none;
-      max-height: 70vh;
+      display: none; /* toggled by .open */
+      /* KEY: scroll inside; ensure we leave ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row) - 10px);
       overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* Android bonus: vertical pan only inside panel */
+      transition: opacity 0.2s ease, transform 0.2s ease;
     }
     .info-content.open { display: block; }
+    .info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
+    .info-content.open       { opacity: 1; transform: translateY(0); }
+
     .info-content h2 { font-size: 18px; margin-bottom: 12px; color: #1a5f2a; }
     .info-content p { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 12px; }
     .info-content h3 { font-size: 15px; margin-top: 16px; margin-bottom: 8px; color: #1a5f2a; }
@@ -67,63 +99,12 @@
       font-style: normal; background: #f0f7f1; padding: 8px 12px; border-radius: 4px; font-size: 13px;
     }
 
-    /* Popup styling */
-    .leaflet-popup-content { min-width: 250px; max-width: 320px; }
-    .popup-header {
-      font-size: 16px; font-weight: 600; color: #1a5f2a;
-      margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;
-    }
-    .popup-section { margin-bottom: 12px; }
-    .popup-section-title {
-      font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .popup-row {
-      display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0;
-    }
-    .popup-label { color: #666; }
-    .popup-value { font-weight: 500; color: #333; }
-
-    .species-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-    .species-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-    .species-2 { background: #28a745; color: #ffffff; }
-    .species-1 { background: #d4edda; color: #155724; }
-    .species-0 { background: #f8d7da; color: #721c24; }
-    .species-empty { background: #e9ecef; color: #6c757d; }
-
-    .legend {
-      position: absolute; bottom: 30px; left: 10px; z-index: 1000;
-      background: white; padding: 12px 15px; border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
-    }
-    .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
-    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .legend-color { width: 16px; height: 16px; border-radius: 10px; }
-
-    .download-btn {
-      position: absolute; bottom: 30px; right: 10px; z-index: 1000;
-      background: white; border: none; padding: 10px 15px; border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
-      font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
-    }
-    .download-btn:hover { background: #f5f5f5; }
-
-    .loading {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 1000; background: white; padding: 20px 30px; border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
-    }
-
-  
-
-
-    
-    /* --- Filter toggle button --- */
+    /* ========== Filter toggle & panel (top-left) ========== */
     .filter-toggle {
       position: absolute;
-      top: 10px;
-      left: 60px; /* moved to the right so it doesn't cover the zoom controls */
-      z-index: 1001;
+      top: var(--ui-top-safe);
+      left: 60px; /* desktop/tablet: offset from zoom controls */
+      z-index: 1300; /* keep button above panels for easy tapping */
       background: white;
       border: none;
       padding: 10px 12px;
@@ -138,23 +119,31 @@
     }
     .filter-toggle:hover { background: #f5f5f5; }
 
-    /* Filter panel */
     .filter-panel {
       position: absolute;
-      top: 10px;
-      left: 60px; /* moved to the right so it doesn't cover the zoom controls */
+      top: var(--ui-top-safe);
+      left: 60px; /* desktop/tablet: offset from zoom controls */
       z-index: 1000;
       background: white;
       padding: 12px 14px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      width: 280px;
+      width: min(280px, 70vw);
+      max-width: 90vw;
       transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
-    }
-    /* Provide space so panel sits below the toggle button */
-    .filter-panel.with-toggle-offset { margin-top: 46px; }
 
-    /* Collapsed state */
+      /* KEY: scroll inside; ensure we leave ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--toggle-row-height));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* Android bonus */
+    }
+
+    /* Provide space so panel sits below the toggle button */
+    .filter-panel.with-toggle-offset { margin-top: var(--toggle-row-height); }
+
+    /* Collapsed state (hidden) */
     .filter-panel.is-collapsed {
       max-height: 0 !important;
       padding: 0 0 !important;
@@ -198,7 +187,33 @@
       margin-top:8px;
     }
 
-    /* Simple link styling used in info panel */
+    /* ========== Legend & other fixed UI ========== */
+    .legend {
+      position: absolute;
+      bottom: 30px; left: 10px;
+      z-index: 1100; /* above map, below toggles */
+      background: white; padding: 12px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
+    }
+    .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .legend-color { width: 16px; height: 16px; border-radius: 10px; }
+
+    .download-btn {
+      position: absolute; bottom: 30px; right: 10px; z-index: 1000;
+      background: white; border: none; padding: 10px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
+      font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
+    }
+    .download-btn:hover { background: #f5f5f5; }
+
+    .loading {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 1000; background: white; padding: 20px 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
+    }
+
+    /* Links inside info panel */
     .contact-link {
       color: #000;
       text-decoration: none;
@@ -214,353 +229,61 @@
       outline-offset: 2px;
     }
 
+    /* ========== Leaflet popups ========== */
+    .leaflet-popup-content { min-width: 250px; max-width: 320px; }
+    .popup-header {
+      font-size: 16px; font-weight: 600; color: #1a5f2a;
+      margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;
+    }
+    .popup-section { margin-bottom: 12px; }
+    .popup-section-title {
+      font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .popup-row {
+      display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0;
+    }
+    .popup-label { color: #666; }
+    .popup-value { font-weight: 500; color: #333; }
 
-  
-.filter-panel {
-  position: absolute;
-  top: 10px;
-  left: 60px;
-  z-index: 1000;
-  background: white;
-  padding: 12px 14px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    .species-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .species-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+    .species-2 { background: #28a745; color: #ffffff; }
+    .species-1 { background: #d4edda; color: #155724; }
+    .species-0 { background: #f8d7da; color: #721c24; }
+    .species-empty { background: #e9ecef; color: #6c757d; }
 
-  /* Replace fixed width with responsive rules */
-  width: min(280px, 70vw);  /* Never bigger than 280px, but shrink on small screens */
-  max-width: 90vw;          /* Hard safety limit on very narrow screens */
-}
+    /* ========== Mobile layout tweaks ========== */
+    @media (max-width: 600px) {
+      /* give zoom a tiny margin from the edge */
+      .leaflet-top.leaflet-left { margin-top: 10px; margin-left: 10px; }
 
+      /* Filtrering to the right of zoom control */
+      .filter-toggle {
+        left: calc(10px + 36px + 13px) !important; /* zoom(~36px) + gap */
+        top: var(--ui-top-safe) !important;
+      }
+      .filter-panel {
+        left: calc(10px + 36px + 13px) !important;
+        top: var(--ui-top-safe) !important;
+        right: auto !important;
+        width: auto !important;
+        max-width: 55vw;
+      }
 
-    
-/* Mobile layout (small screens) */
-@media (max-width: 600px) {
-  .filter-panel {
-    left: 10px !important;
-    right: 10px;
-    width: auto !important;
-  }
+      /* Om projektet remains top-right */
+      .info-panel {
+        top: var(--ui-top-safe);
+        right: 10px;
+        left: auto !important;
+        width: auto;
+        max-width: 55vw;
+      }
 
-  .filter-toggle {
-    left: 10px !important;
-  }
-}
-
-
-/* --- Responsive 'Om projektet' panel --- */
-
-/* Adaptive width on all screens */
-.info-panel {
-  /* ensure it doesn't overflow smaller viewports */
-  max-width: min(350px, 80vw);
-}
-
-/* Make the content scroll area adapt better */
-.info-content {
-  /* keep it comfortable on most screens */
-  max-height: min(70vh, 600px);
-}
-
-/* Mobile layout: make the panel full-width at top with margins */
-@media (max-width: 600px) {
-  .info-panel {
-    top: 10px;
-    right: 10px;
-    left: 10px;           /* allow it to span across */
-    max-width: none;      /* override the desktop max-width */
-    width: auto;          /* stretch between left & right */
-  }
-
-  .info-toggle {
-    width: 100%;          /* full-width button for easy tapping */
-    justify-content: space-between;
-  }
-
-  .info-content {
-    max-height: 60vh;     /* slightly shorter so the map remains visible */
-  }
-
-  /* Nudge the legend & download so they don't overlap on tiny screens */
-  .legend { left: 10px; right: 10px; }
-  .download-btn { right: 10px; }
-}
-
-  /* --- Mobile layout: keep controls apart and prevent overlap --- */
-@media (max-width: 600px) {
-  /* Give the Leaflet zoom some breathing room from the screen edge */
-  .leaflet-top.leaflet-left {
-    margin-top: 10px;
-    margin-left: 10px;
-  }
-
-  /* Place the "Filtrering" toggle to the right of the zoom buttons */
-  .filter-toggle {
-    /* Zoom control is ~34–40px wide including margins; 36px + 8px gap works well */
-    left: calc(10px + 36px + 13px) !important;
-    top: 10px !important;
-    z-index: 1001; /* above the panel */
-  }
-
-  /* Place/size the "Filtrering" panel so it doesn't collide with the zoom or info panel */
-  .filter-panel {
-    left: calc(10px + 36px + 13px) !important; /* aligned with its toggle */
-    right: auto !important;
-    top: 10px !important;
-    max-width: 55vw;           /* share the top row with the info panel */
-    width: auto !important;
-    z-index: 1000;
-  }
-
-  /* Keep the toggle-offset margin so the panel drops below its toggle when opened */
-  .filter-panel.with-toggle-offset {
-    margin-top: 46px; /* your existing value works fine */
-  }
-
-  /* "Om projektet" lives in the top-right */
-  .info-panel {
-    top: 10px;
-    right: 10px;
-    left: auto !important;     /* ensure it sticks to the right */
-    max-width: 55vw;           /* share the top row with the filter side */
-    width: auto;
-    z-index: 1000;
-  }
-
-  /* Make the "Om projektet" toggle easy to tap and keep title/± spread out */
-  .info-toggle {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  /* Keep content scrollable but not too tall on small screens */
-  .info-content {
-    max-height: 60vh;
-  }
-
-  /* Tidy up bottom UI on tiny screens */
-  .legend { left: 10px; right: 10px; }
-  .download-btn { right: 10px; }
-}
-
-/* General adaptive widths so panels don’t grow too wide on narrow viewports */
-.filter-panel { width: min(280px, 70vw); max-width: 90vw; }
-.info-panel   { max-width: min(350px, 80vw); }
-
-@media (max-width: 600px) {
-  .info-content { display: none; }
-  .info-content.open { display: block; }
-}
-``
-
-
-.info-content {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
-.info-content.open       { opacity: 1; transform: translateY(0); }
-
-
-
-/* --- Keep "Om projektet" from growing too tall and crowding controls --- */
-.info-panel {
-  /* On all screens, ensure a sensible width and stacking order */
-  max-width: min(350px, 80vw);
-  z-index: 1000;
-}
-
-.info-content {
-  /* Cap the height and make it scroll when opened */
-  max-height: min(70vh, 600px);
-  overflow-y: auto;
-}
-
-/* --- Mobile: position both controls on the same top row without collision --- */
-@media (max-width: 600px) {
-  /* Make sure the Leaflet zoom control isn't glued to the edge */
-  .leaflet-top.leaflet-left {
-    margin-top: 10px;
-    margin-left: 10px;
-  }
-
-  /* Put the "Filtrering" button just to the right of the zoom control */
-  .filter-toggle {
-    left: calc(10px + 36px + 13px) !important; /* zoom (~36px) + gap */
-    top: 10px !important;
-    z-index: 1100; /* stays above info panel */
-  }
-
-  /* If you open the filter panel, it drops below its toggle */
-  .filter-panel {
-    left: calc(10px + 36px + 13px) !important;
-    top: 10px !important;
-    right: auto !important;
-    width: auto !important;
-    max-width: 55vw;           /* share top row with info panel */
-    z-index: 1000;
-  }
-  .filter-panel.with-toggle-offset { margin-top: 46px; }
-
-  /* Keep "Om projektet" in the top-right, sharing the row */
-  .info-panel {
-    top: 10px;
-    right: 10px;
-    left: auto !important;
-    width: auto;
-    max-width: 55vw;           /* share the top row with the filter side */
-  }
-
-  /* Make the toggle full-width (easier tapping) */
-  .info-toggle {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  /* Slightly shorter content area on phones so it doesn't crowd the top row */
-  .info-content {
-    max-height: 60vh;
-  }
-
-  /* Optional: start collapsed on phones to avoid initial overlap entirely */
-  /* .info-content { display: none; }
-     .info-content.open { display: block; } */
-}
-
-    
-/* === Prevent top panels from overlapping the legend === */
-
-/* Tune these if needed */
-:root {
-  --ui-top-safe: 10px;         /* distance from top to your panels */
-  --ui-gap: 8px;               /* minor spacing, not critical */
-  --legend-bottom-safe: 140px; /* reserve space for the legend at bottom */
-}
-
-/* Info panel content scrolls within a capped height */
-.info-content {
-  /* Reserve bottom space so we don't overlap the legend */
-  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  overflow-y: auto;
-}
-
-/* Filter panel (the dropdown body) also needs a cap */
-.filter-panel {
-  /* When expanded, keep it from growing into the legend area */
-  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  overflow-y: auto;
-}
-
-/* Make sure the legend is clickable if things get tight */
-.legend {
-  z-index: 1200;
-}
-
-/* Mobile tuning: panels share the top row, so we reduce height a bit more */
-@media (max-width: 600px) {
-  :root {
-    /* Phones usually have less vertical space; reserve a bit extra */
-    --legend-bottom-safe: 160px;
-  }
-
-  .info-content,
-  .filter-panel {
-    max-height: calc(100vh - 56px - var(--legend-bottom-safe)); /* 56px ~ toggles row height */
-  }
-}
-``
-
-
-/* === Keep dropdowns 10px above the legend and scroll inside === */
-
-/* Defaults you can tweak if you want */
-:root {
-  --ui-top-safe: 10px;          /* distance from top edge to your panels */
-  --toggle-row-height: 46px;    /* your filter panel uses .with-toggle-offset { margin-top: 46px } */
-  --legend-bottom-safe: 150px;  /* approximate legend height + the 10px distance you want */
-}
-
-/* The "Om projektet" body */
-.info-content {
-  /* total available height: viewport - top - legend/safe area */
-  max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  overflow-y: auto;
-}
-
-/* The "Filtrering" dropdown body */
-.filter-panel {
-  /* When opened, it sits below its toggle (46px extra) */
-  max-height: calc(100vh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
-  overflow-y: auto;
-}
-
-/* Make sure the legend stays clickable if things are tight */
-.legend {
-  z-index: 1200;
-}
-
-/* Mobile tuning (less vertical room) */
-@media (max-width: 600px) {
-  :root {
-    /* slightly larger reserve on small screens; the JS below will refine it */
-    --legend-bottom-safe: 170px;
-  }
-
-  .info-content {
-    max-height: calc(100vh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  }
-
-  .filter-panel {
-    max-height: calc(100vh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
-  }
-}
-
-
- === Panels should scroll internally and stop before the legend === */
-
-/* Tweakable defaults */
-:root {
-  --ui-top-safe: 10px;           /* distance from top edge to your panels */
-  --toggle-row-height: 46px;     /* filter panel drops below its toggle */
-  --legend-bottom-safe: 150px;   /* will be auto-updated by JS below */
-}
-
-/* Use dynamic viewport height so mobile URL bar changes don't break the cap */
-.info-content {
-  max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  overflow-y: auto;
-  overscroll-behavior: contain;          /* prevent page from scrolling */
-  -webkit-overflow-scrolling: touch;     /* smooth iOS scroll */
-}
-
-.filter-panel {
-  max-height: calc(100dvh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Ensure the legend stays above and clickable */
-.legend { z-index: 1200; }
-
-/* Keep the Filtrering toggle tappable even if panels get close */
-.filter-toggle { z-index: 1300; position: absolute; }
-
-/* Mobile fine-tuning */
-@media (max-width: 600px) {
-  :root {
-    /* JS below will set this precisely, this is just a safe fallback */
-    --legend-bottom-safe: 170px;
-  }
-
-  .info-content {
-    max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe));
-  }
-
-  .filter-panel {
-    max-height: calc(100dvh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
-  }
-}
-
-    
+      /* Keep bottom UI tidy on narrow screens */
+      .legend { left: 10px; right: 10px; }
+      .download-btn { right: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -707,49 +430,44 @@
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // --- UI toggles ---
+    // --- UI toggles (auto-collapse on mobile) ---
+    function toggleFilterPanel() {
+      const panel = document.getElementById('filterPanel');
+      const btn = document.getElementById('filterToggle');
+      const icon = document.getElementById('filterToggleIcon');
 
+      const isOpening = panel.classList.contains('is-collapsed');
 
-function toggleFilterPanel() {
-  const panel = document.getElementById('filterPanel');
-  const btn = document.getElementById('filterToggle');
-  const icon = document.getElementById('filterToggleIcon');
+      // If opening on mobile, close the "Om projektet" panel
+      if (isOpening && window.innerWidth <= 600) {
+        const infoContent = document.getElementById('info-content');
+        const infoIcon = document.getElementById('toggle-icon');
+        infoContent.classList.remove('open');
+        infoIcon.textContent = '+';
+      }
 
-  const isOpening = panel.classList.contains('is-collapsed');
+      const collapsed = panel.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', (!collapsed).toString());
+      icon.textContent = collapsed ? '＋' : '−';
+    }
 
-  // If opening on mobile, close the "Om projektet" panel
-  if (isOpening && window.innerWidth <= 600) {
-    const infoContent = document.getElementById('info-content');
-    const infoIcon = document.getElementById('toggle-icon');
-    infoContent.classList.remove('open');
-    infoIcon.textContent = '+';
-  }
+    function toggleInfo() {
+      const content = document.getElementById('info-content');
+      const icon = document.getElementById('toggle-icon');
 
-  const collapsed = panel.classList.toggle('is-collapsed');
-  btn.setAttribute('aria-expanded', (!collapsed).toString());
-  icon.textContent = collapsed ? '＋' : '−';
-}
+      const isOpening = !content.classList.contains('open');
 
+      // If opening on mobile, close the filter panel
+      if (isOpening && window.innerWidth <= 600) {
+        const filterPanel = document.getElementById('filterPanel');
+        const filterIcon = document.getElementById('filterToggleIcon');
+        filterPanel.classList.add('is-collapsed');
+        filterIcon.textContent = '＋';
+      }
 
-function toggleInfo() {
-  const content = document.getElementById('info-content');
-  const icon = document.getElementById('toggle-icon');
-
-  const isOpening = !content.classList.contains('open');
-
-  // If opening on mobile, close the filter panel
-  if (isOpening && window.innerWidth <= 600) {
-    const filterPanel = document.getElementById('filterPanel');
-    const filterIcon = document.getElementById('filterToggleIcon');
-    filterPanel.classList.add('is-collapsed');
-    filterIcon.textContent = '＋';
-  }
-
-  content.classList.toggle('open');
-  icon.textContent = content.classList.contains('open') ? '−' : '+';
-}
-
-    
+      content.classList.toggle('open');
+      icon.textContent = content.classList.contains('open') ? '−' : '+';
+    }
 
     // --- Download only filtered data ---
     function downloadData() {
@@ -792,63 +510,61 @@ function toggleInfo() {
       return value;
     }
 
+    function parseShortDanishDate(str) {
+      if (!str) return null;
+      const s = String(str).trim();
 
-function parseShortDanishDate(str) {
-  if (!str) return null;
-  const s = String(str).trim();
+      // ISO format yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const d = new Date(s + "T00:00:00");
+        return isNaN(d) ? null : d;
+      }
 
-  // ISO format yyyy-mm-dd
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const d = new Date(s + "T00:00:00");
-    return isNaN(d) ? null : d;
-  }
+      // Danish formats with 2- or 4-digit year
+      const match = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2}|\d{4})$/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        let year = parseInt(match[3], 10);
 
-  // Danish formats with 2- or 4-digit year
-  const match = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2}|\d{4})$/);
-  if (match) {
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1;
-    let year = parseInt(match[3], 10);
+        // Convert 2-digit year
+        if (year < 100) {
+          year += 2000; // assumption: project years are 2020–2035
+        }
 
-    // Convert 2-digit year
-    if (year < 100) {
-      year += 2000; // assumption: current project years are 2020–2035 range
+        const d = new Date(year, month, day);
+        return isNaN(d) ? null : d;
+      }
+
+      return null;
     }
 
-    const d = new Date(year, month, day);
-    return isNaN(d) ? null : d;
-  }
+    function parseDateFromInput(value) {
+      if (!value) return null;
+      const d = new Date(value + "T00:00:00");
+      return isNaN(d) ? null : d;
+    }
 
-  return null;
-}
+    function dateMatches(rowDateStr, fromStr, toStr) {
+      const hasRange = !!fromStr || !!toStr;
+      if (!hasRange) return true;
 
-function parseDateFromInput(value) {
-  if (!value) return null;
-  const d = new Date(value + "T00:00:00");
-  return isNaN(d) ? null : d;
-}
+      const rowDate = parseShortDanishDate(rowDateStr);
+      if (!rowDate) return false;
 
-function dateMatches(rowDateStr, fromStr, toStr) {
-  const hasRange = !!fromStr || !!toStr;
-  if (!hasRange) return true;
+      const from = parseDateFromInput(fromStr);
+      const to = parseDateFromInput(toStr);
 
-  const rowDate = parseShortDanishDate(rowDateStr);
-  if (!rowDate) return false;
+      if (from && rowDate < from) return false;
 
-  const from = parseDateFromInput(fromStr);
-  const to = parseDateFromInput(toStr);
+      if (to) {
+        // inclusive "to" end of day
+        const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+        if (rowDate >= toInclusive) return false;
+      }
 
-  if (from && rowDate < from) return false;
-
-  if (to) {
-    // inclusive "to" end of day
-    const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
-    if (rowDate >= toInclusive) return false;
-  }
-
-  return true;
-}
-
+      return true;
+    }
 
     function createPopupContent(row) {
       const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
@@ -955,8 +671,7 @@ function dateMatches(rowDateStr, fromStr, toStr) {
     function updateBadge(count) {
       const badge = document.getElementById("filterBadge");
       if (count === allMarkers.length || count === 0) {
-        // Show badge if a filter is active but resulted in 0? We'll display '0 resultater'
-        // Determine if any filter is active:
+        // Show badge if a filter is active but resulted in 0
         const anySpecies = getSelectedSpecies().length > 0;
         const dateFrom = document.getElementById('dateFrom').value;
         const dateTo = document.getElementById('dateTo').value;
@@ -989,10 +704,10 @@ function dateMatches(rowDateStr, fromStr, toStr) {
       for (const m of allMarkers) {
         const row = m.featureData;
 
-        // --- date filter ---
-      if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
+        // date filter
+        if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
 
-        // --- species filter ---
+        // species filter
         if (!showAllSpecies) {
           const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
           const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
@@ -1055,43 +770,43 @@ function dateMatches(rowDateStr, fromStr, toStr) {
       document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
       document.getElementById('dateTo').addEventListener('change', () => applyFilter());
 
-// Turn the species multiselect into a toggleable list
-document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
-  e.preventDefault(); // prevent default browser behavior
+      // Turn the species multiselect into a toggleable list
+      document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
+        e.preventDefault(); // prevent default browser behavior
 
-  const option = e.target;
-  if (option.tagName === 'OPTION') {
-    option.selected = !option.selected; // toggle selection
-    option.dispatchEvent(new Event('change')); // trigger filter update
-  }
-});
-      
+        const option = e.target;
+        if (option.tagName === 'OPTION') {
+          option.selected = !option.selected; // toggle selection
+          option.dispatchEvent(new Event('change')); // trigger filter update
+        }
+      });
+
       // Toggle button
       document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
     }
 
     map.addLayer(markers);
 
-// Dynamically reserve space for the legend so panels end 10px above it
-function setLegendSafeArea() {
-  const legend = document.querySelector('.legend');
-  if (!legend) return;
+    // --- Keep panels 10px above legend: measure legend and set CSS var ---
+    function setLegendSafeArea() {
+      const legend = document.querySelector('.legend');
+      if (!legend) return;
 
-  // Legend height + 10px distance (your requirement) + a small cushion
-  const distanceAboveLegend = 10;
-  const cushion = 8; // optional breathing room
-  const h = legend.offsetHeight + distanceAboveLegend + cushion;
+      // Legend height + 10px distance + small cushion
+      const distance = 10;
+      const cushion = 8;
+      const h = legend.offsetHeight + distance + cushion;
 
-  // Apply to the CSS variable
-  document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
-}
+      document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+    }
+    window.addEventListener('load', setLegendSafeArea);
+    window.addEventListener('resize', setLegendSafeArea);
+    window.addEventListener('orientationchange', setLegendSafeArea);
+    // re-measure after late loads (fonts/map tiles)
+    setTimeout(setLegendSafeArea, 500);
+    setTimeout(setLegendSafeArea, 1500);
 
-// Run on load and on resize/orientation changes
-window.addEventListener('load', setLegendSafeArea);
-window.addEventListener('resize', setLegendSafeArea);
-window.addEventListener('orientationchange', setLegendSafeArea);
-    
-    // Load and display data
+    // --- Load and display data ---
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
@@ -1115,20 +830,6 @@ window.addEventListener('orientationchange', setLegendSafeArea);
           }
         });
 
-        // Dynamically reserve space for the legend so panels don't overlap it
-function setLegendSafeArea() {
-  const legend = document.querySelector('.legend');
-  if (!legend) return;
-  // Height + some breathing room
-  const h = legend.offsetHeight + 20; // px
-  document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
-}
-
-// Run on load and on resize/orientation change
-window.addEventListener('load', setLegendSafeArea);
-window.addEventListener('resize', setLegendSafeArea);
-window.addEventListener('orientationchange', setLegendSafeArea);
-        
         // Tilføj alle markører første gang
         markers.addLayers(allMarkers);
 
@@ -1150,8 +851,6 @@ window.addEventListener('orientationchange', setLegendSafeArea);
         document.getElementById('loading').textContent = 'Fejl ved indlæsning af data';
         console.error('CSV parsing error:', error);
       }
-
-      
     });
   </script>
 </body>
