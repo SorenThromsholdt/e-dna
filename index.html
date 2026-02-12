@@ -304,6 +304,21 @@ html, body {
   right: 0;
 }
 
+    .species-list {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px;
+  height: 140px;
+  overflow-y: auto;
+  background: #fff;
+}
+.species-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 0;
+}
     
   </style>
 </head>
@@ -322,7 +337,7 @@ html, body {
 
     <div class="filter-group">
       <label class="filter-label" for="speciesSelect">Vælg art(er)</label>
-      <select id="speciesSelect" class="filter-multiselect" multiple></select>
+    <div id="speciesSelect" class="species-list"></div>
     </div>
 
     <div class="filter-group">
@@ -678,10 +693,12 @@ html, body {
       }
     }
 
-    function getSelectedSpecies() {
-      const el = document.getElementById('speciesSelect');
-      return Array.from(el.selectedOptions).map(o => o.value);
-    }
+   
+function getSelectedSpecies() {
+  return Array.from(document.querySelectorAll('.species-list input:checked'))
+    .map(cb => cb.value);
+}
+
     function getPresenceMode() {
       return document.getElementById('presenceSelect').value;
     }
@@ -773,13 +790,24 @@ html, body {
 
     function initFilterUI() {
       // udfyld arts-listen fra SPECIES_COLUMNS
-      const sel = document.getElementById('speciesSelect');
-      SPECIES_COLUMNS.forEach(sp => {
-        const opt = document.createElement('option');
-        opt.value = sp;
-        opt.textContent = sp;
-        sel.appendChild(opt);
-      });
+     const list = document.getElementById('speciesSelect');
+SPECIES_COLUMNS.forEach(sp => {
+  const div = document.createElement('div');
+  div.className = 'species-item';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = sp;
+  cb.addEventListener('change', () => applyFilter());
+
+  const label = document.createElement('label');
+  label.textContent = sp;
+
+  div.appendChild(cb);
+  div.appendChild(label);
+  list.appendChild(div);
+});
+
 
       document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
       document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
