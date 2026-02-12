@@ -250,6 +250,74 @@
       .legend { left: 10px; right: 10px; }
       .download-btn { right: 10px; }
     }
+
+/* ===== FINAL: Force panels to stay above the legend (no overlap) ===== */
+
+/* 1) INFO PANEL: give the whole panel a bottom boundary and make the body scroll */
+.info-panel {
+  /* The panel (toggle + body) can never extend below this line */
+  bottom: var(--legend-bottom-safe);
+  display: flex;
+  flex-direction: column;
+  max-width: min(350px, 80vw); /* keep your previous cap */
+  z-index: 1100;               /* below legend (1500), above map */
+}
+
+.info-toggle {
+  flex: 0 0 auto; /* header row keeps its natural height */
+}
+
+/* Let the CONTENT be the scrollable part and allow it to shrink */
+.info-content {
+  flex: 1 1 auto;
+  min-height: 0;                 /* IMPORTANT: allow flex child to shrink & scroll */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  /* Remove previous max-height limits—they no longer matter because bottom is enforced */
+  max-height: none !important;
+}
+
+/* 2) FILTER PANEL: set an explicit top (under the toggle) and a hard bottom boundary */
+.filter-panel {
+  /* Put the panel directly under its toggle */
+  top: calc(var(--ui-top-safe) + var(--toggle-row-height)) !important;
+
+  /* Never let it grow under the legend */
+  bottom: var(--legend-bottom-safe);
+  /* Make the panel body scroll internally */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+
+  /* Remove earlier height caps to avoid conflicts */
+  max-height: none !important;
+}
+
+/* Neutralize the old margin offset (we use the explicit "top" now) */
+.filter-panel.with-toggle-offset {
+  margin-top: 0 !important;
+}
+
+/* 3) MOBILE: keep the same left/right positioning you already use */
+@media (max-width: 600px) {
+  .filter-panel {
+    left: calc(10px + 36px + 13px) !important;
+    right: auto !important;
+    width: auto !important;
+    max-width: 55vw;
+  }
+
+  .info-panel {
+    right: 10px;
+    left: auto !important;
+    max-width: 55vw;
+  }
+}
+
+    
   </style>
 </head>
 <body>
