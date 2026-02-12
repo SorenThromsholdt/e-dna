@@ -574,22 +574,48 @@
     }).addTo(map);
 
     // --- UI toggles ---
-    function toggleInfo() {
-      const content = document.getElementById('info-content');
-      const icon = document.getElementById('toggle-icon');
-      content.classList.toggle('open');
-      icon.textContent = content.classList.contains('open') ? '−' : '+';
-    }
 
-    function toggleFilterPanel() {
-      const panel = document.getElementById('filterPanel');
-      const btn = document.getElementById('filterToggle');
-      const icon = document.getElementById('filterToggleIcon');
 
-      const collapsed = panel.classList.toggle('is-collapsed');
-      btn.setAttribute('aria-expanded', (!collapsed).toString());
-      icon.textContent = collapsed ? '＋' : '−';
-    }
+function toggleFilterPanel() {
+  const panel = document.getElementById('filterPanel');
+  const btn = document.getElementById('filterToggle');
+  const icon = document.getElementById('filterToggleIcon');
+
+  const isOpening = panel.classList.contains('is-collapsed');
+
+  // If opening on mobile, close the "Om projektet" panel
+  if (isOpening && window.innerWidth <= 600) {
+    const infoContent = document.getElementById('info-content');
+    const infoIcon = document.getElementById('toggle-icon');
+    infoContent.classList.remove('open');
+    infoIcon.textContent = '+';
+  }
+
+  const collapsed = panel.classList.toggle('is-collapsed');
+  btn.setAttribute('aria-expanded', (!collapsed).toString());
+  icon.textContent = collapsed ? '＋' : '−';
+}
+
+
+function toggleInfo() {
+  const content = document.getElementById('info-content');
+  const icon = document.getElementById('toggle-icon');
+
+  const isOpening = !content.classList.contains('open');
+
+  // If opening on mobile, close the filter panel
+  if (isOpening && window.innerWidth <= 600) {
+    const filterPanel = document.getElementById('filterPanel');
+    const filterIcon = document.getElementById('filterToggleIcon');
+    filterPanel.classList.add('is-collapsed');
+    filterIcon.textContent = '＋';
+  }
+
+  content.classList.toggle('open');
+  icon.textContent = content.classList.contains('open') ? '−' : '+';
+}
+
+    
 
     // --- Download only filtered data ---
     function downloadData() {
