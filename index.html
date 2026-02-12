@@ -246,6 +246,44 @@
   }
 }
 
+
+/* --- Responsive 'Om projektet' panel --- */
+
+/* Adaptive width on all screens */
+.info-panel {
+  /* ensure it doesn't overflow smaller viewports */
+  max-width: min(350px, 80vw);
+}
+
+/* Make the content scroll area adapt better */
+.info-content {
+  /* keep it comfortable on most screens */
+  max-height: min(70vh, 600px);
+}
+
+/* Mobile layout: make the panel full-width at top with margins */
+@media (max-width: 600px) {
+  .info-panel {
+    top: 10px;
+    right: 10px;
+    left: 10px;           /* allow it to span across */
+    max-width: none;      /* override the desktop max-width */
+    width: auto;          /* stretch between left & right */
+  }
+
+  .info-toggle {
+    width: 100%;          /* full-width button for easy tapping */
+    justify-content: space-between;
+  }
+
+  .info-content {
+    max-height: 60vh;     /* slightly shorter so the map remains visible */
+  }
+
+  /* Nudge the legend & download so they don't overlap on tiny screens */
+  .legend { left: 10px; right: 10px; }
+  .download-btn { right: 10px; }
+}
     
 
   </style>
