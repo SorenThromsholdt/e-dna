@@ -468,6 +468,40 @@
 }
 ``
 
+    /* --- AUTO-WIDTH for Filtrering + Om Projektet, with 10px safe gap to legend --- */
+
+/* Desktop + general responsive behavior */
+.filter-panel,
+.info-panel {
+  max-width: calc(100vw - 20px); /* always keep 10px on left + right */
+}
+
+/* Mobile: panels share the top row, so shrink intelligently */
+@media (max-width: 600px) {
+
+  /* Filtrering panel & toggle: auto width based on remaining space */
+  .filter-toggle,
+  .filter-panel {
+    max-width: calc(50vw - 15px); /* half screen minus 15px for spacing */
+  }
+
+  /* “Om projektet” panel: same auto width rule */
+  .info-panel {
+    max-width: calc(50vw - 15px); /* keeps 10px gap to edge + 5px gap to filter */
+  }
+
+  /* Ensure toggles are fully visible, never clipped */
+  .info-toggle,
+  .filter-toggle {
+    white-space: nowrap;
+  }
+
+  /* Ensure panels scroll instead of expanding downward */
+  .filter-panel,
+  .info-content {
+    overflow-y: auto;
+  }
+}
 
     
   </style>
