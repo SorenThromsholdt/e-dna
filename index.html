@@ -284,8 +284,82 @@
   .legend { left: 10px; right: 10px; }
   .download-btn { right: 10px; }
 }
-    
 
+  /* --- Mobile layout: keep controls apart and prevent overlap --- */
+@media (max-width: 600px) {
+  /* Give the Leaflet zoom some breathing room from the screen edge */
+  .leaflet-top.leaflet-left {
+    margin-top: 10px;
+    margin-left: 10px;
+  }
+
+  /* Place the "Filtrering" toggle to the right of the zoom buttons */
+  .filter-toggle {
+    /* Zoom control is ~34–40px wide including margins; 36px + 8px gap works well */
+    left: calc(10px + 36px + 8px) !important;
+    top: 10px !important;
+    z-index: 1001; /* above the panel */
+  }
+
+  /* Place/size the "Filtrering" panel so it doesn't collide with the zoom or info panel */
+  .filter-panel {
+    left: calc(10px + 36px + 8px) !important; /* aligned with its toggle */
+    right: auto !important;
+    top: 10px !important;
+    max-width: 55vw;           /* share the top row with the info panel */
+    width: auto !important;
+    z-index: 1000;
+  }
+
+  /* Keep the toggle-offset margin so the panel drops below its toggle when opened */
+  .filter-panel.with-toggle-offset {
+    margin-top: 46px; /* your existing value works fine */
+  }
+
+  /* "Om projektet" lives in the top-right */
+  .info-panel {
+    top: 10px;
+    right: 10px;
+    left: auto !important;     /* ensure it sticks to the right */
+    max-width: 55vw;           /* share the top row with the filter side */
+    width: auto;
+    z-index: 1000;
+  }
+
+  /* Make the "Om projektet" toggle easy to tap and keep title/± spread out */
+  .info-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Keep content scrollable but not too tall on small screens */
+  .info-content {
+    max-height: 60vh;
+  }
+
+  /* Tidy up bottom UI on tiny screens */
+  .legend { left: 10px; right: 10px; }
+  .download-btn { right: 10px; }
+}
+
+/* General adaptive widths so panels don’t grow too wide on narrow viewports */
+.filter-panel { width: min(280px, 70vw); max-width: 90vw; }
+.info-panel   { max-width: min(350px, 80vw); }
+
+@media (max-width: 600px) {
+  .info-content { display: none; }
+  .info-content.open { display: block; }
+}
+``
+
+
+.info-content {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
+.info-content.open       { opacity: 1; transform: translateY(0); }
+
+    
   </style>
 </head>
 <body>
