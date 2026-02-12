@@ -5,28 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>eDNA i nicheområder</title>
 
-  <!-- Leaflet CSS -->
-  rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin="" />
-
-  <!-- MarkerCluster CSS -->
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <!-- Leaflet & MarkerCluster CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
 
   <style>
-    /* ======================================================
-       BASE LAYOUT
-    ====================================================== */
+    /* ========== Base / Layout ========== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
       height: 100%;
-      overflow: hidden;             /* Prevent entire page scrolling */
-      overscroll-behavior: none;    /* Android fix */
+      overflow: hidden;          /* prevent page scrolling */
+      overscroll-behavior: none; /* Android overscroll fix */
       background: #fff;
     }
 
@@ -35,30 +37,26 @@
       color: #111;
     }
 
-    /* Map must be FIXED to prevent page scrolling */
+    /* Map is fixed to the viewport so the page never scrolls */
     #map {
       position: fixed;
       top: 0; left: 0; right: 0;
       width: 100vw;
-      height: 100dvh;               /* Mobile-safe height */
+      height: 100dvh;            /* dynamic viewport height for mobile */
       overflow: hidden;
-      touch-action: pan-y;          /* Allow internal vertical gestures */
+      touch-action: pan-y;        /* allow vertical scroll gestures */
       z-index: 1;
     }
 
-    /* ======================================================
-       CSS VARIABLES (JS will update --legend-bottom-safe)
-    ====================================================== */
-    :root {
-      --ui-top-safe: 10px;
-      --toggle-row-height: 46px;
-      --info-toggle-row: 44px;
-      --legend-bottom-safe: 170px;  /* JS will refine this */
+    /* ========== Variables (JS updates --legend-bottom-safe) ========== */
+    :root{
+      --ui-top-safe: 10px;          /* distance from top edge to panels */
+      --toggle-row-height: 46px;    /* filter panel sits under its toggle */
+      --info-toggle-row: 44px;      /* approx height of info toggle button */
+      --legend-bottom-safe: 170px;  /* fallback; will be measured by JS */
     }
 
-    /* ======================================================
-       INFO PANEL (RIGHT SIDE)
-    ====================================================== */
+    /* ========== Info panel (top-right) ========== */
     .info-panel {
       position: absolute;
       top: var(--ui-top-safe);
@@ -85,14 +83,10 @@
       background: white;
       border-radius: 8px;
       padding: 20px;
-      display: none;
       margin-top: 10px;
-
-      /* KEY LIMITATION: stop above legend */
-      max-height: calc(
-        100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row)
-      );
-
+      display: none; /* toggled by .open */
+      /* KEY: scroll inside & stop ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row));
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
@@ -102,64 +96,72 @@
     .info-content.open { display: block; opacity: 1; transform: translateY(0); }
     .info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
 
-    /* ======================================================
-       FILTER PANEL (LEFT SIDE)
-    ====================================================== */
+    .info-content h2 { font-size: 18px; margin-bottom: 12px; color: #1a5f2a; }
+    .info-content p { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 12px; }
+    .info-content h3 { font-size: 15px; margin-top: 16px; margin-bottom: 8px; color: #1a5f2a; }
+    .info-content address {
+      font-style: normal; background: #f0f7f1; padding: 8px 12px; border-radius: 4px; font-size: 13px;
+    }
+    .contact-link { color: #000; text-decoration: none; }
+    .contact-link:hover { text-decoration: underline; }
+
+    /* ========== Filter toggle & panel (top-left) ========== */
     .filter-toggle {
       position: absolute;
       top: var(--ui-top-safe);
-      left: 60px;
-      z-index: 1200;
+      left: 60px; /* desktop/tablet: offset from zoom controls */
+      z-index: 1200; /* keep button above panels for easy tapping */
       background: white;
-      padding: 10px 12px;
       border: none;
+      padding: 10px 12px;
       border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     }
     .filter-toggle:hover { background: #f5f5f5; }
 
     .filter-panel {
       position: absolute;
       top: var(--ui-top-safe);
-      left: 60px;
-      width: min(280px, 70vw);
-      max-width: 90vw;
+      left: 60px; /* desktop/tablet: offset from zoom controls */
+      z-index: 1000;
       background: white;
       padding: 12px 14px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      z-index: 1000;
-      transition: all 0.2s ease;
+      width: min(280px, 70vw);
+      max-width: 90vw;
+      transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
 
-      /* KEY LIMITATION: scroll inside + stop above legend */
-      max-height: calc(
-        100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--toggle-row-height)
-      );
+      /* KEY: scroll inside & stop ≥10px above legend */
+      max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--toggle-row-height));
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
-      touch-action: pan-y;
+      touch-action: pan-y; /* Android bonus */
     }
 
+    /* Provide space so panel sits below the toggle button */
     .filter-panel.with-toggle-offset { margin-top: var(--toggle-row-height); }
+
+    /* Collapsed state (hidden) */
     .filter-panel.is-collapsed {
       max-height: 0 !important;
-      padding: 0 !important;
+      padding: 0 0 !important;
       margin-top: 0 !important;
       opacity: 0;
-      pointer-events: none;
       overflow: hidden;
+      pointer-events: none;
     }
 
-    .filter-title { font-weight: 600; color: #1a5f2a; margin-bottom: 8px; }
+    .filter-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1a5f2a; }
     .filter-group { margin-bottom: 10px; }
-    .filter-label { font-size: 12px; margin-bottom: 4px; display: block; }
+    .filter-label { font-size: 12px; color: #444; margin-bottom: 4px; display: block; }
     .filter-select, .filter-multiselect {
       width: 100%;
       font-size: 13px;
@@ -169,97 +171,107 @@
       background: #fff;
     }
     .filter-multiselect { height: 140px; }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+      background: #f1f3f5; color: #333;
+    }
+    .btn:hover { background: #e9ecef; }
+    .btn-primary { background: #1a5f2a; color: white; }
+    .btn-primary:hover { background: #154c21; }
 
-    /* ======================================================
-       LEGEND
-    ====================================================== */
+    /* Filter badge */
+    .filter-badge {
+      background:#1a5f2a;
+      color:white;
+      padding:4px 10px;
+      border-radius:12px;
+      font-size:12px;
+      display:none;
+      width:fit-content;
+      margin-top:8px;
+    }
+
+    /* ========== Legend & other fixed UI ========== */
     .legend {
       position: absolute;
       bottom: 30px; left: 10px;
-      padding: 12px 15px;
-      border-radius: 8px;
-      background: white;
-      font-size: 12px;
-      z-index: 1500;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      z-index: 1500; /* ensure above map/panels */
+      background: white; padding: 12px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 12px;
     }
+    .legend-title { font-weight: 600; margin-bottom: 8px; color: #333; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .legend-color { width: 16px; height: 16px; border-radius: 10px; }
 
-    /* ======================================================
-       DOWNLOAD BUTTON + LOADING
-    ====================================================== */
     .download-btn {
-      position: absolute;
-      bottom: 30px; right: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      font-size: 13px;
-      cursor: pointer;
+      position: absolute; bottom: 30px; right: 10px; z-index: 1000;
+      background: white; border: none; padding: 10px 15px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); cursor: pointer;
+      font-size: 13px; font-weight: 500; color: #333; transition: background 0.2s;
     }
     .download-btn:hover { background: #f5f5f5; }
 
     .loading {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      z-index: 2000;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 2000; background: white; padding: 20px 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 14px;
     }
 
-    /* ======================================================
-       MOBILE LAYOUT
-    ====================================================== */
+    /* ========== Mobile layout tweaks ========== */
     @media (max-width: 600px) {
-
-      /* Move filter toggle to right of zoom controls */
+      /* give zoom a tiny margin from the edge */
       .leaflet-top.leaflet-left { margin-top: 10px; margin-left: 10px; }
 
+      /* Filtrering to the right of zoom control */
       .filter-toggle {
-        left: calc(10px + 36px + 13px) !important; /* zoom btn width + gap */
+        left: calc(10px + 36px + 13px) !important; /* zoom(~36px) + gap */
+        top: var(--ui-top-safe) !important;
       }
       .filter-panel {
         left: calc(10px + 36px + 13px) !important;
-        max-width: 55vw;
+        top: var(--ui-top-safe) !important;
+        right: auto !important;
         width: auto !important;
+        max-width: 55vw;
       }
 
+      /* Om projektet remains top-right */
       .info-panel {
+        top: var(--ui-top-safe);
         right: 10px;
         left: auto !important;
+        width: auto;
         max-width: 55vw;
       }
 
+      /* Keep bottom UI tidy on narrow screens */
       .legend { left: 10px; right: 10px; }
       .download-btn { right: 10px; }
     }
   </style>
 </head>
 <body>
-
   <div id="map"></div>
 
   <!-- Filter toggle -->
-  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel">
-    Filtrering <span id="filterToggleIcon">＋</span>
+  <button class="filter-toggle" id="filterToggle" aria-controls="filterPanel" aria-expanded="false">
+    <span>Filtrering</span>
+    <span id="filterToggleIcon">＋</span>
   </button>
 
-  <!-- Filter Panel -->
-  <div id="filterPanel" class="filter-panel with-toggle-offset is-collapsed">
+  <!-- Filter panel (starts collapsed) -->
+  <div class="filter-panel with-toggle-offset is-collapsed" id="filterPanel" aria-label="Filter for arter">
     <div class="filter-title">Filtrer efter art</div>
 
     <div class="filter-group">
-      <label class="filter-label">Vælg art(er)</label>
+      <label class="filter-label" for="speciesSelect">Vælg art(er)</label>
       <select id="speciesSelect" class="filter-multiselect" multiple></select>
     </div>
 
     <div class="filter-group">
-      <label class="filter-label">Registreringsstatus</label>
+      <label class="filter-label" for="presenceSelect">Registreringsstatus</label>
       <select id="presenceSelect" class="filter-select">
         <option value="absent">Ikke registreret</option>
         <option value="one">Registreret i én prøve</option>
@@ -269,15 +281,16 @@
 
     <div class="filter-group filter-row">
       <input type="checkbox" id="matchAll" />
-      <label for="matchAll" style="font-size:12px;">Match alle valgte arter</label>
+      <label for="matchAll" style="font-size: 12px; color: #333;">Match alle valgte arter</label>
     </div>
 
+    <!-- Date filter -->
     <div class="filter-group">
       <label class="filter-label">Prøvetagningsdato</label>
       <div class="filter-row">
-        <input type="date" id="dateFrom" class="filter-select">
+        <input type="date" id="dateFrom" class="filter-select" />
         <span style="font-size:12px;">til</span>
-        <input type="date" id="dateTo" class="filter-select">
+        <input type="date" id="dateTo" class="filter-select" />
       </div>
     </div>
 
@@ -288,200 +301,253 @@
     </div>
   </div>
 
-  <!-- INFO PANEL -->
+  <!-- Info panel -->
   <div class="info-panel">
     <button class="info-toggle" onclick="toggleInfo()">
-      Om projektet <span id="toggle-icon">−</span>
+      <span>Om projektet</span>
+      <span id="toggle-icon">−</span>
     </button>
-
     <div class="info-content open" id="info-content">
       <h2>eDNA i nicheområder</h2>
-      <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt.</p>
+      <p>Dette kort viser resultaterne fra Erhvervsakademi Københavns forskningsprojekt "eDNA i nicheområder – et redskab til at finde oversete invasive og rødlistede arter".</p>
       <p>Projektet udføres i samarbejde mellem Erhvervsakademi København, Statens Naturhistoriske Museum og Miljøstyrelsen.</p>
 
-      <h3>Kontakt</h3>
-      <p>Navn: Søren Thromsholdt Christensen<br>
-         E-mail: <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a></p>
+      <h3>Deltagelse</h3>
+      <p>Projektet er et Citizen Science-projekt, og vi tilbyder flere måder at deltage på.</p>
+
+      <h3>Prøvetagning</h3>
+      <p>Man kan få udleveret et prøvetagningssæt og selv indsamle prøverne. Herefter afleveres eller sendes prøverne til os på:</p>
+
+      <address>
+        <a class="contact-link" target="_blank" rel="noopener"
+           href="https://www.google.com/maps?q=Peder+Oxes+All%C3%A9+2,+3400+Hiller%C3%B8d">
+          Peder Oxes Allé 2, 3400 Hillerød
+        </a>
+      </address>
+
+      <p style="margin-top: 12px;">Vi står for at analysere prøverne.</p>
+
+      <h3>Kontaktinformation</h3>
+      <p>Navn: Søren Thromsholdt Christensen</p>
+      <p>E‑mail: <a class="contact-link" href="mailto:stc@ek.dk">stc@ek.dk</a></p>
     </div>
   </div>
 
-  <!-- LEGEND -->
+  <!-- Legend -->
   <div class="legend">
     <div class="legend-title">Artsregistrering</div>
-    <div class="legend-item"><div class="legend-color" style="background:#28a745"></div> Registreret i begge prøver</div>
-    <div class="legend-item"><div class="legend-color" style="background:#d4edda"></div> Registreret i én prøve</div>
-    <div class="legend-item"><div class="legend-color" style="background:#f8d7da"></div> Ikke registreret</div>
-    <div class="legend-item"><div class="legend-color" style="background:#e9ecef"></div> Ikke analyseret</div>
+    <div class="legend-item"><div class="legend-color" style="background: #28a745;"></div><span>Registreret i begge prøver</span></div>
+    <div class="legend-item"><div class="legend-color" style="background: #d4edda;"></div><span>Registreret i én prøve</span></div>
+    <div class="legend-item"><div class="legend-color" style="background: #f8d7da;"></div><span>Ikke registreret</span></div>
+    <div class="legend-item"><div class="legend-color" style="background: #e9ecef;"></div><span>Ikke analyseret</span></div>
   </div>
 
   <button class="download-btn" onclick="downloadData()">📥 Hent data</button>
   <div class="loading" id="loading">Indlæser data...</div>
 
-  <!-- JS LIBS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- JS libs -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-    /* ======================================================
-       CONFIG
-    ====================================================== */
-    const CSV_URL =
-      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv";
+    // --- Config ---
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSFtEG7yEULkEI2LrdnqX_ZNbHf0VzTBuJpz6r3sPpFeWbrqyzMvWEkpE6mfD9WRSnqo_G8Pw-GT1P5/pub?gid=0&single=true&output=csv';
 
     const SPECIES_COLUMNS = [
-      "Aborre","Trepigget hundestejle","Europæisk ål","Stor vandsalamander",
-      "Solaborre","Vandremusling","Lille vandsalamander","Prymnesium parvum",
-      "Flodkrebs","Signalkrebs","Galizisk sumpkrebs","Rødøret terrapin",
-      "Grønbroget tudse","Strandtudse","Europæisk malle","Karpe"
+      'Aborre','Trepigget hundestejle','Europæisk ål','Stor vandsalamander',
+      'Solaborre','Vandremusling','Lille vandsalamander','Prymnesium parvum',
+      'Flodkrebs','Signalkrebs','Galizisk sumpkrebs','Rødøret terrapin',
+      'Grønbroget tudse','Strandtudse','Europæisk malle','Karpe'
     ];
 
-    /* ======================================================
-       MAP INIT
-    ====================================================== */
-    const map = L.map("map").setView([55.9, 11.5], 7);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap contributors'
+    // --- Map init ---
+    const map = L.map('map').setView([55.9, 11.5], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    /* ======================================================
-       TOGGLES (auto collapse)
-    ====================================================== */
-    function toggleFilterPanel() {
-      const panel = document.getElementById("filterPanel");
-      const icon = document.getElementById("filterToggleIcon");
-      const isOpening = panel.classList.contains("is-collapsed");
+    // --- Disable/enable map interactions when panels are open ---
+    function disableMapInteractions() {
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+      map.scrollWheelZoom.disable();
+      map.boxZoom.disable();
+      map.keyboard.disable();
+    }
+    function enableMapInteractions() {
+      map.dragging.enable();
+      map.touchZoom.enable();
+      map.doubleClickZoom.enable();
+      map.scrollWheelZoom.enable();
+      map.boxZoom.enable();
+      map.keyboard.enable();
+    }
+    function anyPanelOpen() {
+      return !document.getElementById('filterPanel').classList.contains('is-collapsed') ||
+             document.getElementById('info-content').classList.contains('open');
+    }
+    function syncMapInteractionLock() {
+      if (anyPanelOpen()) disableMapInteractions(); else enableMapInteractions();
+    }
 
+    // --- UI toggles (auto-collapse on mobile) ---
+    function toggleFilterPanel() {
+      const panel = document.getElementById('filterPanel');
+      const icon  = document.getElementById('filterToggleIcon');
+      const isOpening = panel.classList.contains('is-collapsed');
+
+      // If opening on mobile, close the "Om projektet" panel
       if (isOpening && window.innerWidth <= 600) {
-        document.getElementById("info-content").classList.remove("open");
-        document.getElementById("toggle-icon").textContent = "+";
+        const infoContent = document.getElementById('info-content');
+        const infoIcon = document.getElementById('toggle-icon');
+        infoContent.classList.remove('open');
+        infoIcon.textContent = '+';
       }
 
-      const collapsed = panel.classList.toggle("is-collapsed");
-      icon.textContent = collapsed ? "＋" : "−";
+      const collapsed = panel.classList.toggle('is-collapsed');
+      icon.textContent = collapsed ? '＋' : '−';
+
+      syncMapInteractionLock();
     }
 
     function toggleInfo() {
-      const panel = document.getElementById("filterPanel");
-      const content = document.getElementById("info-content");
-      const icon = document.getElementById("toggle-icon");
-      const isOpening = !content.classList.contains("open");
+      const content = document.getElementById('info-content');
+      const icon    = document.getElementById('toggle-icon');
+      const isOpening = !content.classList.contains('open');
 
+      // If opening on mobile, close the filter panel
       if (isOpening && window.innerWidth <= 600) {
-        panel.classList.add("is-collapsed");
-        document.getElementById("filterToggleIcon").textContent = "＋";
+        const filterPanel = document.getElementById('filterPanel');
+        const filterIcon  = document.getElementById('filterToggleIcon');
+        filterPanel.classList.add('is-collapsed');
+        filterIcon.textContent = '＋';
       }
 
-      content.classList.toggle("open");
-      icon.textContent = content.classList.contains("open") ? "−" : "+";
+      content.classList.toggle('open');
+      icon.textContent = content.classList.contains('open') ? '−' : '+';
+
+      syncMapInteractionLock();
     }
 
-    /* ======================================================
-       DOWNLOAD FILTERED DATA
-    ====================================================== */
+    // --- Download only filtered data ---
     function downloadData() {
       const filtered = markers.getLayers().map(m => m.featureData);
-      if (filtered.length === 0) return alert("Ingen filtrerede data at downloade.");
-
+      if (filtered.length === 0) {
+        alert("Ingen filtrerede data at downloade.");
+        return;
+      }
       const csv = Papa.unparse(filtered);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "edna-filtered.csv";
-      a.click();
+      link.href = URL.createObjectURL(blob);
+      link.download = "edna-filtered.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    /* ======================================================
-       UTILITIES
-    ====================================================== */
-    function parseNumber(v) {
-      if (!v) return NaN;
-      return parseFloat(String(v).replace(",", "."));
+    // --- Helpers ---
+    function parseNumber(value) {
+      if (value === '' || value === null || value === undefined) return NaN;
+      return parseFloat(String(value).replace(',', '.'));
     }
 
-    function getSpeciesClass(val) {
-      if (val === "" || val === null || val === undefined) return "species-empty";
-      const n = parseInt(val, 10);
-      return n === 2 ? "species-2"
-          1 ? "species-1"
-           : n === 0 ? "species-0"
-           : "species-empty";
+    function getSpeciesClass(value) {
+      if (value === '' || value === null || value === undefined) return 'species-empty';
+      const n = parseInt(value, 10);
+      if (Number.isNaN(n)) return 'species-empty';
+      if (n === 2) return 'species-2';
+      if (n === 1) return 'species-1';
+      if (n === 0) return 'species-0';
+      return 'species-empty';
     }
 
     function parseShortDanishDate(str) {
       if (!str) return null;
-      str = str.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(str))
-        return new Date(str + "T00:00:00");
+      const s = String(str).trim();
 
-      const m = str.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2}|\d{4})$/);
-      if (!m) return null;
-
-      let [_, d, mo, y] = m;
-      d = parseInt(d); mo = parseInt(mo) - 1; y = parseInt(y);
-      if (y < 100) y += 2000;
-
-      return new Date(y, mo, d);
-    }
-
-    function parseDateFromInput(v) {
-      if (!v) return null;
-      return new Date(v + "T00:00:00");
-    }
-
-    function dateMatches(str, fromStr, toStr) {
-      if (!fromStr && !toStr) return true;
-      const d = parseShortDanishDate(str);
-      if (!d) return false;
-
-      const from = parseDateFromInput(fromStr);
-      const to = parseDateFromInput(toStr);
-
-      if (from && d < from) return false;
-
-      if (to) {
-        const end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
-        if (d >= end) return false;
+      // ISO: yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const d = new Date(s + "T00:00:00");
+        return isNaN(d) ? null : d;
       }
 
+      // Danish: d.m.yyyy / d-m-yyyy / d/m/yy etc.
+      const m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2}|\d{4})$/);
+      if (m) {
+        const day = parseInt(m[1], 10);
+        const mon = parseInt(m[2], 10) - 1;
+        let year  = parseInt(m[3], 10);
+        if (year < 100) year += 2000;
+        const d = new Date(year, mon, day);
+        return isNaN(d) ? null : d;
+      }
+      return null;
+    }
+
+    function parseDateFromInput(value) {
+      if (!value) return null;
+      const d = new Date(value + "T00:00:00");
+      return isNaN(d) ? null : d;
+    }
+
+    function dateMatches(rowDateStr, fromStr, toStr) {
+      const hasRange = !!fromStr || !!toStr;
+      if (!hasRange) return true;
+
+      const rowDate = parseShortDanishDate(rowDateStr);
+      if (!rowDate) return false;
+
+      const from = parseDateFromInput(fromStr);
+      const to   = parseDateFromInput(toStr);
+
+      if (from && rowDate < from) return false;
+
+      if (to) {
+        // inclusive "to" end of day
+        const toInclusive = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+        if (rowDate >= toInclusive) return false;
+      }
       return true;
     }
 
-    /* ======================================================
-       POPUP CONTENT
-    ====================================================== */
     function createPopupContent(row) {
-      const lokalitet = row["Lokalitet"] || "Ukendt lokalitet";
-      const provenr = row["Prøvenr."] || "";
-      const dato = row["Indsamlingsdato"] || "";
-      const vandml = row["Vandmiljø"] || "";
+      const lokalitet = row['Lokalitet'] || 'Ukendt lokalitet';
+      const provenr = row['Prøvenr.'] || '';
+      const dato = row['Indsamlingsdato'] || '';
+      const vandmiljo = row['Vandmiljø'] || '';
 
       let html = `<div class="popup-header">${lokalitet}</div>`;
 
-      html += `<div class="popup-section">
-                 <div class="popup-section-title">Prøveinfo</div>
-                 ${provenr ? `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>` : ""}
-                 ${dato ? `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>` : ""}
-                 ${vandml ? `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandml}</span></div>` : ""}
-               </div>`;
+      // Prøveinfo
+      html += `<div class="popup-section">`;
+      html += `<div class="popup-section-title">Prøveinfo</div>`;
+      if (provenr) html += `<div class="popup-row"><span class="popup-label">Prøvenr.</span><span class="popup-value">${provenr}</span></div>`;
+      if (dato) html += `<div class="popup-row"><span class="popup-label">Dato</span><span class="popup-value">${dato}</span></div>`;
+      if (vandmiljo) html += `<div class="popup-row"><span class="popup-label">Vandmiljø</span><span class="popup-value">${vandmiljo}</span></div>`;
+      html += `</div>`;
 
-      html += `<div class="popup-section">
-                 <div class="popup-section-title">Arter</div>
-                 <div class="species-grid">`;
-
-      for (const sp of SPECIES_COLUMNS)
-        html += `<span class="species-badge ${getSpeciesClass(row[sp])}">${sp}</span>`;
-
+      // Arter
+      html += `<div class="popup-section">`;
+      html += `<div class="popup-section-title">Arter</div>`;
+      html += `<div class="species-grid">`;
+      for (const species of SPECIES_COLUMNS) {
+        const cssClass = getSpeciesClass(row[species]);
+        html += `<span class="species-badge ${cssClass}">${species}</span>`;
+      }
       html += `</div></div>`;
+
       return html;
     }
 
-    /* ======================================================
-       FILTER LOGIC
-    ====================================================== */
+    // --- Filter state and cluster ---
     let allMarkers = [];
     let allBounds = [];
     const markers = L.markerClusterGroup({
@@ -500,163 +566,184 @@
         badge.style.display = "none";
         return;
       }
-
       badge.style.display = "inline-block";
       badge.textContent = `${count} resultater`;
     }
 
     function getSelectedSpecies() {
-      return [...document.getElementById("speciesSelect").selectedOptions].map(o => o.value);
+      const el = document.getElementById('speciesSelect');
+      return Array.from(el.selectedOptions).map(o => o.value);
     }
-    function getPresenceMode() { return document.getElementById("presenceSelect").value; }
-    function getMatchAll()   { return document.getElementById("matchAll").checked; }
+    function getPresenceMode() {
+      return document.getElementById('presenceSelect').value;
+    }
+    function getMatchAll() {
+      return document.getElementById('matchAll').checked;
+    }
 
-    function valueMatchesMode(val, mode) {
-      if (val === null || val === "" || val === undefined) return false;
-      const n = parseInt(val, 10);
-      return (mode === "both" && n === 2) ||
-             (mode === "one"  && n === 1) ||
-             (mode === "absent" && n === 0);
+    function valueMatchesMode(cellValue, mode) {
+      const v = (cellValue === null || cellValue === undefined) ? '' : String(cellValue).trim();
+      if (v === '') return false;
+      const n = parseInt(v, 10);
+      if (Number.isNaN(n)) return false;
+      return (mode === 'both' && n === 2) ||
+             (mode === 'one'  && n === 1) ||
+             (mode === 'absent' && n === 0);
     }
 
     function applyFilter({ fit = false } = {}) {
-      const species = getSelectedSpecies();
+      const selectedSpecies = getSelectedSpecies();
       const mode = getPresenceMode();
       const matchAll = getMatchAll();
-      const from = document.getElementById("dateFrom").value;
-      const to = document.getElementById("dateTo").value;
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
 
       markers.clearLayers();
+      const kept = [];
 
-      const kept = allMarkers.filter(m => {
+      for (const m of allMarkers) {
         const row = m.featureData;
 
-        /* date filter */
-        if (!dateMatches(row["Indsamlingsdato"], from, to))
-          return false;
+        // date filter
+        if (!dateMatches(row['Indsamlingsdato'], dateFrom, dateTo)) continue;
 
-        /* species filter */
-        if (species.length > 0) {
-          const results = species.map(sp => valueMatchesMode(row[sp], mode));
-          if (matchAll ? !results.every(Boolean) : !results.some(Boolean))
-            return false;
+        // species filter
+        if (selectedSpecies.length > 0) {
+          const results = selectedSpecies.map(sp => valueMatchesMode(row[sp], mode));
+          const ok = matchAll ? results.every(Boolean) : results.some(Boolean);
+          if (!ok) continue;
         }
 
-        return true;
-      });
+        kept.push(m);
+      }
 
-      markers.addLayers(kept);
+      if (kept.length) markers.addLayers(kept);
       updateBadge(kept.length);
 
-      if (fit && kept.length > 0) {
-        map.fitBounds(kept.map(m => m.getLatLng()), { padding: [50, 50] });
+      if (fit && kept.length) {
+        const b = kept.map(m => m.getLatLng());
+        map.fitBounds(L.latLngBounds(b), { padding: [50, 50] });
       }
     }
 
     function resetFilter() {
-      document.getElementById("speciesSelect").selectedIndex = -1;
-      document.getElementById("presenceSelect").value = "absent";
-      document.getElementById("matchAll").checked = false;
-      document.getElementById("dateFrom").value = "";
-      document.getElementById("dateTo").value = "";
+      document.getElementById('speciesSelect').selectedIndex = -1;
+      document.getElementById('presenceSelect').value = 'absent';
+      document.getElementById('matchAll').checked = false;
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
 
       markers.clearLayers();
       markers.addLayers(allMarkers);
       updateBadge(allMarkers.length);
 
-      if (allBounds.length > 0)
+      if (allBounds.length) {
         map.fitBounds(allBounds, { padding: [50, 50] });
+      }
     }
 
-    /* ======================================================
-       INIT FILTER UI
-    ====================================================== */
     function initFilterUI() {
-      const sel = document.getElementById("speciesSelect");
+      // species options
+      const sel = document.getElementById('speciesSelect');
       SPECIES_COLUMNS.forEach(sp => {
-        const o = document.createElement("option");
-        o.value = sp;
-        o.textContent = sp;
-        sel.appendChild(o);
+        const opt = document.createElement('option');
+        opt.value = sp;
+        opt.textContent = sp;
+        sel.appendChild(opt);
       });
 
-      document.getElementById("applyFilterBtn").onclick = () => applyFilter({ fit: true });
-      document.getElementById("resetFilterBtn").onclick = resetFilter;
+      document.getElementById('applyFilterBtn').addEventListener('click', () => applyFilter({ fit: true }));
+      document.getElementById('resetFilterBtn').addEventListener('click', resetFilter);
 
-      document.getElementById("speciesSelect").onchange = () => applyFilter();
-      document.getElementById("presenceSelect").onchange = () => applyFilter();
-      document.getElementById("matchAll").onchange = () => applyFilter();
-      document.getElementById("dateFrom").onchange = () => applyFilter();
-      document.getElementById("dateTo").onchange = () => applyFilter();
+      // live updates
+      document.getElementById('speciesSelect').addEventListener('change', () => applyFilter());
+      document.getElementById('presenceSelect').addEventListener('change', () => applyFilter());
+      document.getElementById('matchAll').addEventListener('change', () => applyFilter());
+      document.getElementById('dateFrom').addEventListener('change', () => applyFilter());
+      document.getElementById('dateTo').addEventListener('change', () => applyFilter());
 
-      /* Multi-select toggle behavior */
-      sel.addEventListener("mousedown", function(e) {
+      // multiselect toggle behavior
+      document.getElementById('speciesSelect').addEventListener('mousedown', function (e) {
         e.preventDefault();
-        if (e.target.tagName === "OPTION") {
-          e.target.selected = !e.target.selected;
-          sel.dispatchEvent(new Event("change"));
+        const option = e.target;
+        if (option.tagName === 'OPTION') {
+          option.selected = !option.selected;
+          option.dispatchEvent(new Event('change'));
         }
       });
 
-      document.getElementById("filterToggle")
-        .addEventListener("click", toggleFilterPanel);
+      // toggle button
+      document.getElementById('filterToggle').addEventListener('click', toggleFilterPanel);
     }
 
-    /* ======================================================
-       UPDATE SPACE ABOVE LEGEND
-    ====================================================== */
+    map.addLayer(markers);
+
+    // --- Keep panels ≥10px above legend: measure legend and set CSS var ---
     function setLegendSafeArea() {
-      const legend = document.querySelector(".legend");
+      const legend = document.querySelector('.legend');
       if (!legend) return;
-
-      const needed = legend.offsetHeight + 18; /* 10px + cushion */
-      document.documentElement.style.setProperty("--legend-bottom-safe", needed + "px");
+      const distanceAboveLegend = 10;
+      const cushion = 8;
+      const h = legend.offsetHeight + distanceAboveLegend + cushion;
+      document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
     }
-
-    window.addEventListener("load", setLegendSafeArea);
-    window.addEventListener("resize", setLegendSafeArea);
-    window.addEventListener("orientationchange", setLegendSafeArea);
+    window.addEventListener('load', setLegendSafeArea);
+    window.addEventListener('resize', setLegendSafeArea);
+    window.addEventListener('orientationchange', setLegendSafeArea);
     setTimeout(setLegendSafeArea, 500);
     setTimeout(setLegendSafeArea, 1500);
 
-    /* ======================================================
-       LOAD DATA
-    ====================================================== */
+    // --- Load and display data ---
+    const loading = document.getElementById('loading');
+
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
       skipEmptyLines: true,
-      complete(results) {
-        loading.style.display = "none";
+      complete: function(results) {
+        loading.style.display = 'none';
 
         const bounds = [];
 
         results.data.forEach(row => {
-          const lat = parseNumber(row["Y-koordinat"]);
-          const lng = parseNumber(row["X-koordinat"]);
+          const lat = parseNumber(row['Y-koordinat']);
+          const lng = parseNumber(row['X-koordinat']);
+
           if (!isNaN(lat) && !isNaN(lng)) {
-            const m = L.marker([lat, lng]);
-            m.bindPopup(createPopupContent(row));
-            m.featureData = row;
-            allMarkers.push(m);
+            const marker = L.marker([lat, lng]);
+            marker.bindPopup(createPopupContent(row), { maxWidth: 350, maxHeight: 400 });
+            marker.featureData = row;
+
+            allMarkers.push(marker);
             bounds.push([lat, lng]);
           }
         });
 
+        // add all markers first time
         markers.addLayers(allMarkers);
+
+        // store bounds for reset
         allBounds = bounds;
 
-        if (bounds.length > 0)
+        // fit map
+        if (bounds.length) {
           map.fitBounds(bounds, { padding: [50, 50] });
+        }
 
+        // init filter UI when data ready
         initFilterUI();
+
+        // init badge
         updateBadge(allMarkers.length);
       },
-      error(err) {
-        loading.textContent = "Fejl ved indlæsning af data";
-        console.error(err);
+      error: function(error) {
+        loading.textContent = 'Fejl ved indlæsning af data';
+        console.error('CSV parsing error:', error);
       }
     });
+
+    // ensure map interactions are correct on initial state
+    syncMapInteractionLock();
   </script>
 </body>
 </html>
