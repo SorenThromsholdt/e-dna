@@ -514,6 +514,52 @@
 }
 
 
+ === Panels should scroll internally and stop before the legend === */
+
+/* Tweakable defaults */
+:root {
+  --ui-top-safe: 10px;           /* distance from top edge to your panels */
+  --toggle-row-height: 46px;     /* filter panel drops below its toggle */
+  --legend-bottom-safe: 150px;   /* will be auto-updated by JS below */
+}
+
+/* Use dynamic viewport height so mobile URL bar changes don't break the cap */
+.info-content {
+  max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  overflow-y: auto;
+  overscroll-behavior: contain;          /* prevent page from scrolling */
+  -webkit-overflow-scrolling: touch;     /* smooth iOS scroll */
+}
+
+.filter-panel {
+  max-height: calc(100dvh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure the legend stays above and clickable */
+.legend { z-index: 1200; }
+
+/* Keep the Filtrering toggle tappable even if panels get close */
+.filter-toggle { z-index: 1300; position: absolute; }
+
+/* Mobile fine-tuning */
+@media (max-width: 600px) {
+  :root {
+    /* JS below will set this precisely, this is just a safe fallback */
+    --legend-bottom-safe: 170px;
+  }
+
+  .info-content {
+    max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe));
+  }
+
+  .filter-panel {
+    max-height: calc(100dvh - var(--ui-top-safe) - var(--toggle-row-height) - var(--legend-bottom-safe));
+  }
+}
+
     
   </style>
 </head>
