@@ -359,6 +359,73 @@
 .info-content:not(.open) { opacity: 0; transform: translateY(-4px); }
 .info-content.open       { opacity: 1; transform: translateY(0); }
 
+
+
+/* --- Keep "Om projektet" from growing too tall and crowding controls --- */
+.info-panel {
+  /* On all screens, ensure a sensible width and stacking order */
+  max-width: min(350px, 80vw);
+  z-index: 1000;
+}
+
+.info-content {
+  /* Cap the height and make it scroll when opened */
+  max-height: min(70vh, 600px);
+  overflow-y: auto;
+}
+
+/* --- Mobile: position both controls on the same top row without collision --- */
+@media (max-width: 600px) {
+  /* Make sure the Leaflet zoom control isn't glued to the edge */
+  .leaflet-top.leaflet-left {
+    margin-top: 10px;
+    margin-left: 10px;
+  }
+
+  /* Put the "Filtrering" button just to the right of the zoom control */
+  .filter-toggle {
+    left: calc(10px + 36px + 8px) !important; /* zoom (~36px) + gap */
+    top: 10px !important;
+    z-index: 1100; /* stays above info panel */
+  }
+
+  /* If you open the filter panel, it drops below its toggle */
+  .filter-panel {
+    left: calc(10px + 36px + 8px) !important;
+    top: 10px !important;
+    right: auto !important;
+    width: auto !important;
+    max-width: 55vw;           /* share top row with info panel */
+    z-index: 1000;
+  }
+  .filter-panel.with-toggle-offset { margin-top: 46px; }
+
+  /* Keep "Om projektet" in the top-right, sharing the row */
+  .info-panel {
+    top: 10px;
+    right: 10px;
+    left: auto !important;
+    width: auto;
+    max-width: 55vw;           /* share the top row with the filter side */
+  }
+
+  /* Make the toggle full-width (easier tapping) */
+  .info-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Slightly shorter content area on phones so it doesn't crowd the top row */
+  .info-content {
+    max-height: 60vh;
+  }
+
+  /* Optional: start collapsed on phones to avoid initial overlap entirely */
+  /* .info-content { display: none; }
+     .info-content.open { display: block; } */
+}
+
+
     
   </style>
 </head>
