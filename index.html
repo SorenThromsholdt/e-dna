@@ -767,6 +767,9 @@
     setTimeout(setLegendSafeArea, 500);
     setTimeout(setLegendSafeArea, 1500);
 
+    if (window.__updatePanelHeights) window.__updatePanelHeights();
+  ``
+    
     // --- Load and display data ---
     const loading = document.getElementById('loading');
 
@@ -870,6 +873,8 @@
 
         // init badge
         updateBadge(allMarkers.length);
+
+        if (window.__updatePanelHeights) window.__updatePanelHeights();
       },
       error: function(error) {
         loading.textContent = 'Fejl ved indlæsning af data';
