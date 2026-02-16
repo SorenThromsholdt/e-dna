@@ -319,6 +319,28 @@ html, body {
   font-size: 13px;
   padding: 4px 0;
 }
+
+
+* ----------------------------------------------
+   Ensure BOTH panels end 5px above the legend
+   and scroll internally on mobile
+------------------------------------------------ */
+.info-content,
+.filter-panel {
+  /* internal scroll */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+
+  /* dynamic height: viewport - top - legend - small spacing */
+  max-height: calc(
+      100dvh
+      - var(--ui-top-safe)
+      - var(--legend-bottom-safe)
+      - 5px
+  );
+}
+
     
   </style>
 </head>
@@ -872,24 +894,29 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
 
     map.addLayer(markers);
 
-    // --- Keep panels 10px above legend: measure legend and set CSS var ---
-    function setLegendSafeArea() {
-      const legend = document.querySelector('.legend');
-      if (!legend) return;
+   function setLegendSafeArea() {
+  const legend = document.querySelector('.legend');
+  if (!legend) return;
 
-      // Legend height + 10px distance + small cushion
-      const distance = 10;
-      const cushion = 8;
-      const h = legend.offsetHeight + distance + cushion;
+  // Height of legend + 5px buffer
+  const buffer = 5;
+  const legendHeight = legend.offsetHeight + buffer;
 
-      document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
-    }
-    window.addEventListener('load', setLegendSafeArea);
-    window.addEventListener('resize', setLegendSafeArea);
-    window.addEventListener('orientationchange', setLegendSafeArea);
-    // re-measure after late loads (fonts/map tiles)
-    setTimeout(setLegendSafeArea, 500);
-    setTimeout(setLegendSafeArea, 1500);
+  document.documentElement.style.setProperty(
+    '--legend-bottom-safe',
+    legendHeight + 'px'
+  );
+}
+
+// Update safety margin on load, resize & orientation changes
+window.addEventListener('load', setLegendSafeArea);
+window.addEventListener('resize', setLegendSafeArea);
+window.addEventListener('orientationchange', setLegendSafeArea);
+
+// Extra checks for late-rendering content
+setTimeout(setLegendSafeArea, 300);
+setTimeout(setLegendSafeArea, 1200);
+
 
     // --- Load and display data ---
     Papa.parse(CSV_URL, {
