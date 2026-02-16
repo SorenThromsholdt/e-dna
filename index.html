@@ -319,43 +319,6 @@ html, body {
   font-size: 13px;
   padding: 4px 0;
 }
-
-
-* ----------------------------------------------
-   Ensure BOTH panels end 5px above the legend
-   and scroll internally on mobile
------------------------------------------------- */
-.info-content,
-.filter-panel {
-  /* internal scroll */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-
-  /* dynamic height: viewport - top - legend - small spacing */
-  max-height: calc(
-      100dvh
-      - var(--ui-top-safe)
-      - var(--legend-bottom-safe)
-      - 5px
-  );
-}
-
-    
-/* ===============================================
-   FORCE both dropdown panels to stop above legend
-   and scroll internally on all mobile devices
-   =============================================== */
-.filter-panel,
-.info-content {
-  overflow-y: auto !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-
-  /* Dynamic height controlled by JS */
-  max-height: var(--panel-max-height) !important;
-}
-
     
   </style>
 </head>
@@ -909,20 +872,24 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
 
     map.addLayer(markers);
 
-/* ===============================================
-   FORCE both dropdown panels to stop above legend
-   and scroll internally on all mobile devices
-   =============================================== */
-.filter-panel,
-.info-content {
-  overflow-y: auto !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+    // --- Keep panels 10px above legend: measure legend and set CSS var ---
+    function setLegendSafeArea() {
+      const legend = document.querySelector('.legend');
+      if (!legend) return;
 
-  /* Dynamic height controlled by JS */
-  max-height: var(--panel-max-height) !important;
-}
+      // Legend height + 10px distance + small cushion
+      const distance = 10;
+      const cushion = 8;
+      const h = legend.offsetHeight + distance + cushion;
 
+      document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
+    }
+    window.addEventListener('load', setLegendSafeArea);
+    window.addEventListener('resize', setLegendSafeArea);
+    window.addEventListener('orientationchange', setLegendSafeArea);
+    // re-measure after late loads (fonts/map tiles)
+    setTimeout(setLegendSafeArea, 500);
+    setTimeout(setLegendSafeArea, 1500);
 
     // --- Load and display data ---
     Papa.parse(CSV_URL, {
