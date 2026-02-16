@@ -342,6 +342,21 @@ html, body {
 }
 
     
+/* ===============================================
+   FORCE both dropdown panels to stop above legend
+   and scroll internally on all mobile devices
+   =============================================== */
+.filter-panel,
+.info-content {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+
+  /* Dynamic height controlled by JS */
+  max-height: var(--panel-max-height) !important;
+}
+
+    
   </style>
 </head>
 <body>
@@ -894,28 +909,19 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
 
     map.addLayer(markers);
 
-   function setLegendSafeArea() {
-  const legend = document.querySelector('.legend');
-  if (!legend) return;
+/* ===============================================
+   FORCE both dropdown panels to stop above legend
+   and scroll internally on all mobile devices
+   =============================================== */
+.filter-panel,
+.info-content {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 
-  // Height of legend + 5px buffer
-  const buffer = 5;
-  const legendHeight = legend.offsetHeight + buffer;
-
-  document.documentElement.style.setProperty(
-    '--legend-bottom-safe',
-    legendHeight + 'px'
-  );
+  /* Dynamic height controlled by JS */
+  max-height: var(--panel-max-height) !important;
 }
-
-// Update safety margin on load, resize & orientation changes
-window.addEventListener('load', setLegendSafeArea);
-window.addEventListener('resize', setLegendSafeArea);
-window.addEventListener('orientationchange', setLegendSafeArea);
-
-// Extra checks for late-rendering content
-setTimeout(setLegendSafeArea, 300);
-setTimeout(setLegendSafeArea, 1200);
 
 
     // --- Load and display data ---
