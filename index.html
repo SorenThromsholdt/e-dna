@@ -653,8 +653,8 @@ html, body {
       if (observationer || bemaerkninger) {
         html += `<div class="popup-section">`;
         html += `<div class="popup-section-title">Observationer</div>`;
-        if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer} </span></div>`;
-        if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger} </span></div>`;
+        if (observationer) html += `<div class="popup-row"><span class="popup-value">${observationer+' '}</span></div>`;
+        if (bemaerkninger) html += `<div class="popup-row"><span class="popup-value" style="font-style: italic;">${bemaerkninger+' '}</span></div>`;
         html += `</div>`;
       }
 
