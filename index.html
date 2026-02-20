@@ -59,7 +59,7 @@
       top: var(--ui-top-safe);
       right: 10px;
       z-index: 1000;
-      max-width: min(350px, 80vw);
+      /* No fixed width — button sizes to its text content */
     }
 
     .info-toggle {
@@ -74,18 +74,21 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-left: auto;
-      width: 100%;
-      justify-content: space-between;
+      white-space: nowrap; /* keep button compact, same as Filtrering button */
     }
     .info-toggle:hover { background: #f5f5f5; }
 
     .info-content {
+      /* Absolute so it floats below the button without stretching the panel/button width */
+      position: absolute;
+      right: 0;
+      top: calc(var(--info-toggle-row) + 10px);
+      /* Left edge stops where the Filtrering button begins (~60px from left) */
+      width: min(420px, calc(100vw - 70px));
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
       padding: 20px;
-      margin-top: 10px;
       display: none; /* toggled by .open */
       /* KEY: scroll inside; ensure we leave ≥10px above legend */
       max-height: calc(100dvh - var(--ui-top-safe) - var(--legend-bottom-safe) - var(--info-toggle-row) - 10px);
@@ -135,7 +138,7 @@
       padding: 12px 14px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      width: min(280px, 70vw);
+      width: min(360px, 85vw);
       max-width: 90vw;
       transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
 
@@ -271,11 +274,11 @@
         top: var(--ui-top-safe) !important;
       }
       .filter-panel {
-        left: calc(10px + 36px + 13px) !important;
+        left: calc(10px + 36px + 13px) !important; /* ~59px */
         top: var(--ui-top-safe) !important;
-        right: auto !important;
+        right: 10px !important; /* same right gap as Om projektet dropdown */
         width: auto !important;
-        max-width: 44vw;
+        max-width: none !important;
       }
 
       /* Om projektet remains top-right */
@@ -283,8 +286,10 @@
         top: var(--ui-top-safe);
         right: 10px;
         left: auto !important;
-        width: auto;
-        max-width: 44vw;
+      }
+      /* On mobile the dropdown stops at the Filtrering button's left edge */
+      .info-content {
+        width: calc(100vw - 70px);
       }
 
       /* Keep bottom UI tidy on narrow screens */
@@ -469,8 +474,8 @@
 
       const isOpening = panel.classList.contains('is-collapsed');
 
-      // If opening on mobile, close the "Om projektet" panel
-      if (isOpening && window.innerWidth <= 600) {
+      // If opening, always close the "Om projektet" panel
+      if (isOpening) {
         const infoContent = document.getElementById('info-content');
         const infoIcon = document.getElementById('toggle-icon');
         infoContent.classList.remove('open');
@@ -488,12 +493,13 @@
 
       const isOpening = !content.classList.contains('open');
 
-      // If opening on mobile, close the filter panel
-      if (isOpening && window.innerWidth <= 600) {
+      // If opening, always close the filter panel
+      if (isOpening) {
         const filterPanel = document.getElementById('filterPanel');
         const filterIcon = document.getElementById('filterToggleIcon');
         filterPanel.classList.add('is-collapsed');
         filterIcon.textContent = '＋';
+        document.getElementById('filterToggle').setAttribute('aria-expanded', 'false');
       }
 
       content.classList.toggle('open');
@@ -843,10 +849,12 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
       const legend = document.querySelector('.legend');
       if (!legend) return;
 
-      // Legend height + 10px distance + small cushion
-      const distance = 10;
-      const cushion = 8;
-      const h = legend.offsetHeight + distance + cushion;
+      // Measure from bottom of viewport to top of the legend box, then add a cushion.
+      // This properly accounts for the legend's bottom offset AND its height.
+      const rect = legend.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const cushion = 14;
+      const h = (vh - rect.top) + cushion;
 
       document.documentElement.style.setProperty('--legend-bottom-safe', h + 'px');
     }
