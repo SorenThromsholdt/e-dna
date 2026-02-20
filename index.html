@@ -28,6 +28,7 @@
     html, body {
       height: 100%;
       overflow: hidden; /* prevent page scrolling; panels/map handle their own scrolling */
+      overscroll-behavior: none;
     }
 
     body {
@@ -36,7 +37,13 @@
     }
 
     /* Use dynamic viewport height so mobile browser UI doesn’t break layout */
-    #map { width: 100vw; height: 100dvh; }
+    #map {
+      width: 100vw;
+      height: 100dvh;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      overflow: hidden;
+    }
 
     /* ========== Variables (JS updates --legend-bottom-safe) ========== */
     :root{
@@ -268,7 +275,7 @@
         top: var(--ui-top-safe) !important;
         right: auto !important;
         width: auto !important;
-        max-width: 55vw;
+        max-width: 44vw;
       }
 
       /* Om projektet remains top-right */
@@ -277,49 +284,30 @@
         right: 10px;
         left: auto !important;
         width: auto;
-        max-width: 55vw;
+        max-width: 44vw;
       }
 
       /* Keep bottom UI tidy on narrow screens */
-      .legend { left: 10px; right: 10px; }
-      .download-btn { right: 10px; }
+      .legend { left: 10px; max-width: calc(100vw - 90px); }
+      .download-btn { right: 10px; bottom: 30px; }
     }
 
 
-/* Prevent the entire page from scrolling on mobile */
-html, body {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none; /* key fix for Android Chrome */
-}
-
-/* Map container must not allow page scroll */
-#map {
-  height: 100dvh;         /* mobile-safe full height */
-  overflow: hidden;       /* prevents scroll tunneling */
-  touch-action: none;     /* prevents accidental “page move” */
-  position: fixed;        /* ensures it pins the viewport */
-  top: 0;
-  left: 0;
-  right: 0;
-}
-
     .species-list {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 6px;
-  height: 140px;
-  overflow-y: auto;
-  background: #fff;
-}
-.species-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  padding: 4px 0;
-}
-    
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 6px;
+      height: 140px;
+      overflow-y: auto;
+      background: #fff;
+    }
+    .species-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      padding: 4px 0;
+    }
   </style>
 </head>
 <body>
@@ -714,42 +702,20 @@ function getSelectedSpecies() {
     }
 
     function anyFilterActive() {
-  const speciesChosen = getSelectedSpecies().length > 0;
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
-  return speciesChosen || !!dateFrom || !!dateTo; // presenceSelect virker kun når arter er valgt
-}
-
-function updateBadge(count) {
-  const badge = document.getElementById("filterBadge");
-  if (!anyFilterActive()) {
-    badge.style.display = "none";
-    return;
-  }
-  badge.style.display = "inline-block";
-  badge.textContent = `${count} resultater`;
-}
-``
+      const speciesChosen = getSelectedSpecies().length > 0;
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      return speciesChosen || !!dateFrom || !!dateTo;
+    }
 
     function updateBadge(count) {
-      const badge = document.getElementById("filterBadge");
-      if (count === allMarkers.length || count === 0) {
-        // Show badge if a filter is active but resulted in 0
-        const anySpecies = getSelectedSpecies().length > 0;
-        const dateFrom = document.getElementById('dateFrom').value;
-        const dateTo = document.getElementById('dateTo').value;
-        const hasDate = !!dateFrom || !!dateTo;
-
-        if (anySpecies || hasDate) {
-          badge.style.display = "inline-block";
-          badge.textContent = `${count} resultater`;
-        } else {
-          badge.style.display = "none";
-        }
-      } else {
-        badge.style.display = "inline-block";
-        badge.textContent = `${count} resultater`;
+      const badge = document.getElementById('filterBadge');
+      if (!anyFilterActive()) {
+        badge.style.display = 'none';
+        return;
       }
+      badge.style.display = 'inline-block';
+      badge.textContent = `${count} resultater`;
     }
 
     function applyFilter({ fit = false } = {}) {
@@ -937,6 +903,14 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
         console.error('CSV parsing error:', error);
       }
     });
+
+    // Auto-collapse info panel on small screens so it doesn't dominate the view on first load
+    if (window.innerWidth <= 600) {
+      const infoContent = document.getElementById('info-content');
+      const infoIcon   = document.getElementById('toggle-icon');
+      infoContent.classList.remove('open');
+      infoIcon.textContent = '+';
+    }
   </script>
 </body>
 </html>
