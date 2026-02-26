@@ -711,7 +711,63 @@ function getSelectedSpecies() {
       const speciesChosen = getSelectedSpecies().length > 0;
       const dateFrom = document.getElementById('dateFrom').value;
       const dateTo = document.getElementById('dateTo').value;
-      return speciesChosen || !!dateFrom || !!dateTo;
+      const mode = getPresenceMode();
+      const matchAll = getMatchAll();
+      return speciesChosen || !!dateFrom || !!dateTo || mode !== 'absent' || matchAll;
+    }
+
+    function updateURLParams() {
+      const selectedSpecies = getSelectedSpecies();
+      const mode = getPresenceMode();
+      const matchAll = getMatchAll();
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+
+      const params = new URLSearchParams();
+      if (selectedSpecies.length > 0) params.set('species', selectedSpecies.join(','));
+      if (mode !== 'absent') params.set('presence', mode);
+      if (matchAll) params.set('matchAll', 'true');
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', dateTo);
+
+      const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({ path: newURL }, '', newURL);
+    }
+
+    function loadFilterFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      
+      const species = params.get('species');
+      if (species) {
+        const selected = species.split(',');
+        document.querySelectorAll('#speciesSelect input[type="checkbox"]').forEach(cb => {
+          if (selected.includes(cb.value)) cb.checked = true;
+        });
+      }
+
+      const presence = params.get('presence');
+      if (presence) {
+        document.getElementById('presenceSelect').value = presence;
+      }
+
+      const matchAll = params.get('matchAll');
+      if (matchAll === 'true') {
+        document.getElementById('matchAll').checked = true;
+      }
+
+      const from = params.get('from');
+      if (from) {
+        document.getElementById('dateFrom').value = from;
+      }
+
+      const to = params.get('to');
+      if (to) {
+        document.getElementById('dateTo').value = to;
+      }
+
+      if (params.toString()) {
+        applyFilter({ fit: true });
+      }
     }
 
     function updateBadge(count) {
@@ -762,6 +818,8 @@ function getSelectedSpecies() {
         const b = kept.map(m => m.getLatLng());
         map.fitBounds(L.latLngBounds(b), { padding: [50, 50] });
       }
+
+      updateURLParams();
     }
 
 
@@ -788,6 +846,8 @@ function resetFilter() {
   if (allBounds.length > 0) {
     map.fitBounds(allBounds, { padding: [50, 50] });
   }
+
+  updateURLParams();
 }
 
 
@@ -902,6 +962,9 @@ document.getElementById('clearAllSpeciesBtn').addEventListener('click', () => {
 
         // init filter-UI når data er klar
         initFilterUI();
+
+        // Load filters from URL if present
+        loadFilterFromURL();
 
         // Init badge to hidden / full count
         updateBadge(allMarkers.length);
